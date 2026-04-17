@@ -64,7 +64,7 @@ pnpm install
 
 ```bash
 cp .env.example .env
-# Edit .env — set HARNESS_API_KEY and HARNESS_ACCOUNT_ID at minimum
+# Edit .env — set HARNESS_ACCOUNT_ID and at least one of HARNESS_API_KEY or HARNESS_BEARER_TOKEN
 ```
 
 ### 3. Build and run
@@ -93,18 +93,18 @@ npx playwright install chromium
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `HARNESS_API_KEY` | Yes | — | Harness personal access token or service account token (`pat.<accountId>.<tokenId>.<secret>`) |
-| `HARNESS_ACCOUNT_ID` | No | *(from PAT)* | Account identifier. Auto-extracted from PAT tokens. |
-| `HARNESS_BEARER_TOKEN` | No | — | Browser session JWT for CCM `/ccm/*` endpoints. Alternative to PAT for CCM-only access. |
+| `HARNESS_API_KEY` | No* | — | Harness personal access token or service account token (`pat.<accountId>.<tokenId>.<secret>`). Required for non-CCM APIs. |
+| `HARNESS_BEARER_TOKEN` | No* | — | Browser session JWT for CCM `/ccm/*` endpoints. Alternative to PAT for CCM-only access. |
+| `HARNESS_ACCOUNT_ID` | Yes | *(from PAT)* | Account identifier. Auto-extracted from PAT tokens; required when using a bearer token. |
 | `HARNESS_BASE_URL` | No | `https://app.harness.io` | Override for self-managed Harness. |
+| `PORT` | No | `3000` | HTTP transport port. |
 | `HARNESS_DEFAULT_ORG_ID` | No | `default` | Default org identifier. |
-| `HARNESS_DEFAULT_PROJECT_ID` | No | — | Default project identifier. |
 | `HARNESS_API_TIMEOUT_MS` | No | `30000` | HTTP request timeout (ms). |
 | `HARNESS_MAX_RETRIES` | No | `3` | Retries for transient failures (429, 5xx). |
 | `LOG_LEVEL` | No | `info` | `debug` \| `info` \| `warn` \| `error`. All logs go to stderr only. |
-| `PORT` | No | `3000` | HTTP transport port. |
-| `HARNESS_TOOLSETS` | No | `ccm` | Comma-separated toolsets to enable. Defaults to `ccm`. |
-| `HARNESS_REPORT_PORT` | No | `4321` | Report renderer port in stdio mode. Not needed in HTTP mode — renderer shares `PORT`. |
+| `HARNESS_LOG_REQUEST_FILE` | No | — | If set, logs every outbound HTTP request to this file path (useful for debugging). |
+
+\* At least one of `HARNESS_API_KEY` or `HARNESS_BEARER_TOKEN` must be provided.
 
 ---
 
