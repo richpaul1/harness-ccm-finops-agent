@@ -55,8 +55,8 @@ All resource types are accessed via `harness_ccm_finops_list` / `harness_ccm_fin
 ### 1. Clone and install
 
 ```bash
-git clone https://github.com/richpaul1/harness-mcp-v2.git
-cd harness-mcp-v2
+git clone https://github.com/richpaul1/harness-ccm-finops-agent.git
+cd harness-ccm-finops-agent
 pnpm install
 ```
 
@@ -131,7 +131,7 @@ Start the server first with `pnpm start:http`, then connect Cursor.
   "mcpServers": {
     "harness-finops": {
       "command": "node",
-      "args": ["/absolute/path/to/harness-mcp-v2/build/index.js", "stdio"],
+      "args": ["/absolute/path/to/harness-ccm-finops-agent/build/index.js", "stdio"],
       "env": {
         "HARNESS_API_KEY": "pat.xxx.xxx.xxx",
         "HARNESS_ACCOUNT_ID": "your-account-id"
