@@ -1,0 +1,168 @@
+/* =============================================================
+   PRINT / PDF VIEW — Paged Media via paged.polyfill.js
+   ============================================================= */
+
+@page {
+  size: A4;
+  margin: 22mm 18mm 22mm 18mm;
+}
+
+@page :first {
+  margin: 0;
+}
+
+@page cover {
+  margin: 0;
+}
+
+@page toc {
+  margin: 22mm 18mm 22mm 18mm;
+  @bottom-center {
+    content: counter(page);
+    font-family: "Inter", sans-serif;
+    font-size: 9.5px;
+    color: #64708a;
+  }
+}
+
+/* Main body pages: running header + footer */
+@page main {
+  margin: 22mm 18mm 22mm 18mm;
+  @top-left {
+    content: string(doc-customer);
+    font-family: "Inter", sans-serif;
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #64708a;
+    font-weight: 600;
+  }
+  @top-center {
+    content: string(doc-title);
+    font-family: "Inter", sans-serif;
+    font-size: 9px;
+    color: #8a95ac;
+  }
+  @top-right {
+    content: string(doc-section);
+    font-family: "Inter", sans-serif;
+    font-size: 9px;
+    color: #8a95ac;
+  }
+  @bottom-left {
+    content: "Harness CCM · Confidential";
+    font-family: "Inter", sans-serif;
+    font-size: 9px;
+    color: #8a95ac;
+  }
+  @bottom-right {
+    content: counter(page) " / " counter(pages);
+    font-family: "JetBrains Mono", monospace;
+    font-size: 9.5px;
+    color: #334766;
+    font-weight: 500;
+  }
+}
+
+.print-doc { font-size: 10.5pt; line-height: 1.55; }
+
+.print-doc .doc-body h1 { string-set: doc-section content(); }
+
+/* Hide web-only chrome */
+.print-doc .app-sidebar,
+.print-doc #export-pdf,
+.print-doc .anchor-link { display: none !important; }
+
+/* Cover */
+.print-doc .cover-page {
+  page: cover;
+  margin: 0;
+  padding: 24mm 22mm 22mm;
+  min-height: 297mm;
+  height: 297mm;
+  border-radius: 0;
+  page-break-after: always;
+}
+
+/* TOC */
+.print-doc .toc-page {
+  page: toc;
+  page-break-before: always;
+  page-break-after: always;
+  margin: 0;
+}
+.print-doc .print-toc a::after {
+  content: target-counter(attr(href), page);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10.5pt;
+  color: #334766;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  margin-left: 8px;
+}
+.print-doc .print-toc .toc-l2 a::after { color: #64708a; font-size: 10pt; }
+
+/* Main document pages */
+.print-doc .doc-body {
+  page: main;
+  page-break-before: always;
+}
+.print-doc .doc-body::before {
+  /* bind the strings used in running headers */
+  content: "";
+  display: none;
+}
+
+/* Set running strings from frontmatter via body data attributes */
+body[data-doc-customer]::after {
+  content: attr(data-doc-customer);
+  string-set: doc-customer attr(data-doc-customer);
+}
+
+/* Page breaks */
+.print-doc .doc-body h1 { page-break-before: always; }
+.print-doc .doc-body h1:first-child { page-break-before: auto; }
+.print-doc .doc-body h2,
+.print-doc .doc-body h3 { page-break-after: avoid; }
+.print-doc .doc-body figure,
+.print-doc .doc-body .callout,
+.print-doc .doc-body table,
+.print-doc .metric-grid { page-break-inside: avoid; }
+
+/* Tables in print — stronger contrast on rows */
+.print-doc .doc-body table { font-size: 9.5pt; }
+.print-doc .doc-body thead th { font-size: 8.5pt; }
+.print-doc .doc-body tbody td { padding: 10px 12px; }
+
+/* Code */
+.print-doc .doc-body pre { font-size: 9pt; padding: 14px 16px; }
+
+/* Size adjustments for print */
+.print-doc .page-title { font-size: 32pt; }
+.print-doc .cover-title { font-size: 42pt; }
+.print-doc .cover-customer-name { font-size: 22pt; }
+.print-doc .doc-body h1 { font-size: 24pt; }
+.print-doc .doc-body h2 { font-size: 16pt; }
+.print-doc .doc-body h3 { font-size: 12.5pt; }
+.print-doc .doc-body p { max-width: none; }
+
+.print-doc .doc-body figure.figure img {
+  max-width: 100%;
+  max-height: 180mm;
+  object-fit: contain;
+}
+
+/* Paged.js injects its own wrapper; make sure our cover fills page */
+.pagedjs_page .pagedjs_page_content { overflow: visible; }
+
+/* Force one PDF page per Paged.js page */
+.pagedjs_page {
+  page-break-after: always !important;
+  break-after: page !important;
+  page-break-inside: avoid !important;
+  break-inside: avoid !important;
+}
+.pagedjs_page:last-of-type {
+  page-break-after: avoid !important;
+  break-after: avoid !important;
+}

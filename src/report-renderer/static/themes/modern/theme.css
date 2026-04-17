@@ -1,0 +1,656 @@
+/* =============================================================
+   MODERN EDITORIAL THEME
+   Bold grotesque type · monochrome base · single electric accent
+   ============================================================= */
+
+:root {
+  /* Monochrome */
+  --m-ink: #0a0b0e;
+  --m-ink-2: #1a1c22;
+  --m-body: #2a2d35;
+  --m-muted: #6b6f78;
+  --m-soft: #9aa0ab;
+  --m-line: #e9ebef;
+  --m-line-2: #d8dbe1;
+  --m-bg: #ffffff;
+  --m-bg-soft: #fafaf8;
+  --m-bg-tint: #f2f2ee;
+
+  /* Signature electric accent + coral secondary */
+  --m-accent: #2962ff;
+  --m-accent-2: #0040d9;
+  --m-accent-soft: #e5edff;
+  --m-coral: #ff5b4d;
+  --m-coral-soft: #ffe8e5;
+  --m-amber: #f4a100;
+  --m-amber-soft: #fff3d9;
+  --m-emerald: #00a976;
+  --m-emerald-soft: #d9f5ea;
+  --m-violet: #7f5fff;
+  --m-violet-soft: #ece5ff;
+
+  /* Typography */
+  --font-display: "Space Grotesk", "Inter", sans-serif;
+  --font-sans: "Inter", -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", "SF Mono", Consolas, monospace;
+
+  --radius-sm: 4px;
+  --radius: 10px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+
+  /* Shadows — very subtle for print friendliness */
+  --shadow-sm: 0 1px 2px rgba(10,11,14,0.04);
+  --shadow: 0 2px 8px rgba(10,11,14,0.05), 0 1px 2px rgba(10,11,14,0.04);
+  --shadow-lg: 0 20px 60px rgba(10,11,14,0.08), 0 4px 12px rgba(10,11,14,0.05);
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--m-body);
+  background: var(--m-bg);
+  font-feature-settings: "cv11", "ss01", "ss03";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Page container for web — cap line length */
+.doc-container {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 64px 80px 160px;
+}
+
+/* =============================================================
+   Cover page — editorial, bold, asymmetric
+   ============================================================= */
+.cover-page {
+  position: relative;
+  background: var(--m-ink);
+  color: #f5f5f2;
+  min-height: 820px;
+  padding: 56px 64px 64px;
+  margin: 0 -80px 80px;
+  border-radius: 4px;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  overflow: hidden;
+}
+
+.cover-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  position: relative;
+  z-index: 3;
+}
+.cover-wordmark { display: flex; flex-direction: column; gap: 6px; }
+.cover-logo { display: flex; align-items: center; gap: 10px; }
+.cover-logo-dot {
+  width: 10px;
+  height: 10px;
+  background: var(--m-coral);
+  border-radius: 50%;
+  display: inline-block;
+}
+.cover-logo-text {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 18px;
+  letter-spacing: -0.02em;
+  color: #fff;
+}
+.cover-sub {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(245,245,242,0.45);
+  margin-left: 20px;
+}
+.cover-classification {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(245,245,242,0.6);
+  padding: 6px 10px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 999px;
+}
+
+.cover-stripe {
+  position: absolute;
+  top: 0;
+  right: 80px;
+  width: 3px;
+  height: 65%;
+  background: linear-gradient(180deg, var(--m-coral), transparent);
+  z-index: 1;
+}
+
+.cover-grid-decor {
+  position: absolute;
+  bottom: 160px;
+  right: 64px;
+  display: grid;
+  grid-template-columns: repeat(4, 10px);
+  grid-template-rows: repeat(2, 10px);
+  gap: 14px;
+  z-index: 1;
+}
+.cover-grid-decor span {
+  width: 10px;
+  height: 10px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 50%;
+}
+.cover-grid-decor span:nth-child(3) { background: var(--m-coral); }
+
+.cover-body {
+  align-self: end;
+  position: relative;
+  z-index: 2;
+  max-width: 88%;
+  padding-top: 80px;
+}
+.cover-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 28px;
+}
+.cover-kicker {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--m-coral);
+  font-weight: 500;
+}
+.cover-date {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  color: rgba(245,245,242,0.55);
+}
+.cover-title {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 76px;
+  line-height: 0.96;
+  letter-spacing: -0.035em;
+  color: #fff;
+  margin: 0 0 24px;
+  max-width: 14ch;
+}
+.cover-subtitle {
+  font-family: var(--font-sans);
+  font-size: 18px;
+  line-height: 1.45;
+  color: rgba(245,245,242,0.72);
+  font-weight: 400;
+  max-width: 56ch;
+  margin: 0;
+}
+
+.cover-foot {
+  display: flex;
+  gap: 72px;
+  padding-top: 40px;
+  margin-top: 48px;
+  border-top: 1px solid rgba(245,245,242,0.14);
+  position: relative;
+  z-index: 2;
+}
+.cover-foot-row { display: flex; flex-direction: column; gap: 4px; }
+.cover-foot-label {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(245,245,242,0.45);
+}
+.cover-foot-value {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: #fff;
+}
+
+/* =============================================================
+   Page titles (TOC, section openers)
+   ============================================================= */
+.page-kicker {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--m-coral);
+  font-weight: 500;
+  margin-bottom: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.page-kicker::before {
+  content: "";
+  width: 20px;
+  height: 1px;
+  background: var(--m-coral);
+}
+
+.page-title {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 56px;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  color: var(--m-ink);
+  margin: 0 0 56px;
+}
+
+/* =============================================================
+   TOC
+   ============================================================= */
+.toc-page { margin-bottom: 80px; }
+.print-toc {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.print-toc li {
+  border-top: 1px solid var(--m-line);
+}
+.print-toc li:last-child { border-bottom: 1px solid var(--m-line); }
+.print-toc a {
+  display: flex;
+  align-items: baseline;
+  gap: 20px;
+  padding: 18px 2px;
+  color: var(--m-ink);
+  text-decoration: none;
+  font-family: var(--font-sans);
+  font-size: 16px;
+  font-weight: 500;
+  transition: color 0.12s;
+}
+.print-toc a:hover { color: var(--m-accent); }
+.print-toc .toc-l1 a { font-size: 18px; }
+.print-toc .toc-l2 a {
+  padding-left: 44px;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--m-muted);
+}
+.toc-num {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--m-coral);
+  min-width: 32px;
+  letter-spacing: 0.04em;
+}
+.toc-num-sub { color: transparent; }
+.toc-text { flex: 0 0 auto; }
+.toc-leader {
+  flex: 1;
+  border-bottom: 1px dotted var(--m-line-2);
+  transform: translateY(-4px);
+  margin: 0 12px;
+}
+
+/* =============================================================
+   Headings — bold, oversized, display grotesque
+   ============================================================= */
+.doc-body { counter-reset: h1-counter figure-counter; }
+.doc-body h1 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 56px;
+  line-height: 1;
+  letter-spacing: -0.035em;
+  color: var(--m-ink);
+  margin: 96px 0 32px;
+  padding-top: 0;
+  border-top: 0;
+  counter-increment: h1-counter;
+  position: relative;
+}
+.doc-body h1::before {
+  content: counter(h1-counter, decimal-leading-zero);
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--m-coral);
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  margin-bottom: 24px;
+}
+.doc-body h1::after {
+  content: "";
+  display: block;
+  width: 48px;
+  height: 2px;
+  background: var(--m-ink);
+  margin-top: 24px;
+}
+
+.doc-body h2 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 30px;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+  color: var(--m-ink);
+  margin: 64px 0 20px;
+}
+
+.doc-body h3 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 20px;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  color: var(--m-ink-2);
+  margin: 40px 0 14px;
+}
+
+.doc-body h4 {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--m-ink-2);
+  margin: 28px 0 10px;
+  letter-spacing: -0.01em;
+}
+
+/* =============================================================
+   Body copy
+   ============================================================= */
+.doc-body p {
+  margin: 0 0 18px;
+  max-width: 70ch;
+  font-size: 15.5px;
+  line-height: 1.7;
+}
+.doc-body strong { color: var(--m-ink); font-weight: 600; }
+
+.doc-body a {
+  color: var(--m-accent);
+  text-decoration: none;
+  border-bottom: 1px solid var(--m-accent-soft);
+  font-weight: 500;
+  transition: border-color 0.12s;
+}
+.doc-body a:hover { border-color: var(--m-accent); }
+
+.doc-body hr {
+  border: 0;
+  height: 1px;
+  background: var(--m-line);
+  margin: 56px 0;
+}
+
+.doc-body ul, .doc-body ol {
+  margin: 0 0 22px;
+  padding-left: 22px;
+}
+.doc-body li { margin-bottom: 8px; font-size: 15.5px; }
+.doc-body li::marker { color: var(--m-coral); }
+
+.doc-body blockquote {
+  margin: 28px 0;
+  padding: 20px 28px;
+  background: var(--m-bg-soft);
+  border-left: 3px solid var(--m-ink);
+  color: var(--m-body);
+  font-size: 15px;
+  border-radius: 0 var(--radius) var(--radius) 0;
+}
+.doc-body blockquote p:last-child { margin-bottom: 0; }
+
+/* =============================================================
+   Tables — airy, underlined, no side borders
+   ============================================================= */
+.doc-body table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 28px 0;
+  font-size: 14.5px;
+  font-variant-numeric: tabular-nums;
+  border-top: 2px solid var(--m-ink);
+  border-bottom: 2px solid var(--m-ink);
+}
+.doc-body thead th {
+  text-align: left;
+  padding: 14px 16px;
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: 10.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--m-ink);
+  background: transparent;
+  border-bottom: 1px solid var(--m-line-2);
+  white-space: nowrap;
+}
+.doc-body tbody td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--m-line);
+  vertical-align: top;
+  color: var(--m-body);
+}
+.doc-body tbody tr:last-child td { border-bottom: 0; }
+.doc-body tbody tr:hover td { background: var(--m-bg-soft); }
+
+.doc-body table code {
+  font-size: 12.5px;
+  background: var(--m-bg-tint);
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: var(--m-ink);
+}
+
+/* =============================================================
+   Code
+   ============================================================= */
+.doc-body code {
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+  background: var(--m-bg-tint);
+  color: var(--m-ink);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.doc-body pre {
+  background: var(--m-ink);
+  color: #e0e3ea;
+  padding: 22px 24px;
+  border-radius: var(--radius);
+  overflow-x: auto;
+  font-size: 13px;
+  line-height: 1.7;
+  margin: 24px 0;
+}
+.doc-body pre code { background: transparent; padding: 0; color: inherit; }
+
+/* =============================================================
+   Figures — frameless, hero-style
+   ============================================================= */
+.doc-body figure.figure {
+  margin: 44px 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  counter-increment: figure-counter;
+}
+.doc-body figure.figure img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius-lg);
+  background: var(--m-bg-soft);
+  box-shadow: var(--shadow);
+}
+.doc-body figure figcaption {
+  margin-top: 16px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--m-muted);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.doc-body figure figcaption::before {
+  content: "Fig. " counter(figure-counter) " — ";
+  color: var(--m-coral);
+  font-weight: 500;
+}
+
+/* =============================================================
+   Callouts — clean left bar, no icon badges, just a tiny dot + label
+   ============================================================= */
+.callout {
+  margin: 28px 0;
+  padding: 22px 28px;
+  border-radius: var(--radius);
+  position: relative;
+  font-size: 15px;
+  line-height: 1.6;
+  border-left: 3px solid;
+  background: var(--m-bg-soft);
+}
+.callout .callout-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.callout .callout-icon {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+  color: transparent;
+  flex: 0 0 auto;
+  align-self: center;
+}
+.callout .callout-title {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: 10.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.callout .callout-body > *:last-child { margin-bottom: 0; }
+.callout .callout-body { color: var(--m-ink); font-size: 15px; }
+
+.callout-critical { background: var(--m-coral-soft); border-left-color: var(--m-coral); }
+.callout-critical .callout-icon { background: var(--m-coral); }
+.callout-critical .callout-title { color: #b3392c; }
+
+.callout-risk, .callout-warning {
+  background: var(--m-amber-soft);
+  border-left-color: var(--m-amber);
+}
+.callout-risk .callout-icon,
+.callout-warning .callout-icon { background: var(--m-amber); }
+.callout-risk .callout-title,
+.callout-warning .callout-title { color: #8a5c00; }
+
+.callout-success {
+  background: var(--m-emerald-soft);
+  border-left-color: var(--m-emerald);
+}
+.callout-success .callout-icon { background: var(--m-emerald); }
+.callout-success .callout-title { color: #006e4e; }
+
+.callout-info, .callout-quote {
+  background: var(--m-accent-soft);
+  border-left-color: var(--m-accent);
+}
+.callout-info .callout-icon,
+.callout-quote .callout-icon { background: var(--m-accent); }
+.callout-info .callout-title,
+.callout-quote .callout-title { color: var(--m-accent-2); }
+
+.callout-action {
+  background: var(--m-violet-soft);
+  border-left-color: var(--m-violet);
+}
+.callout-action .callout-icon { background: var(--m-violet); }
+.callout-action .callout-title { color: #5b40d4; }
+
+/* =============================================================
+   Metric cards — huge numbers, tiny labels, airy whitespace
+   ============================================================= */
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 2px;
+  margin: 40px 0;
+  border: 1px solid var(--m-line);
+  border-radius: var(--radius-lg);
+  background: var(--m-line);
+  overflow: hidden;
+}
+.metric-card {
+  padding: 28px 28px 32px;
+  background: var(--m-bg);
+  border: 0;
+  border-radius: 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.metric-card .metric-label {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--m-muted);
+  font-weight: 500;
+  margin-bottom: 10px;
+}
+.metric-card .metric-value {
+  font-family: var(--font-display);
+  font-size: 40px;
+  font-weight: 500;
+  color: var(--m-ink);
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+.metric-card .metric-trend {
+  margin-top: 12px;
+  font-size: 13px;
+  color: var(--m-muted);
+  line-height: 1.4;
+}
+.metric-card::after {
+  content: "";
+  position: absolute;
+  top: 28px;
+  right: 28px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--m-line-2);
+}
+.metric-card.metric-success::after { background: var(--m-emerald); }
+.metric-card.metric-critical::after { background: var(--m-coral); }
+.metric-card.metric-risk::after,
+.metric-card.metric-warning::after { background: var(--m-amber); }
+.metric-card.metric-info::after { background: var(--m-accent); }
+
+/* =============================================================
+   Utilities
+   ============================================================= */
+.page-break-before { page-break-before: always; }

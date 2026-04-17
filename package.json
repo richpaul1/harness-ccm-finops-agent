@@ -1,0 +1,82 @@
+{
+  "name": "harness-ccm-finops-mcp",
+  "version": "1.0.0",
+  "description": "FinOps Agent — AI-powered cloud cost management via Harness CCM. Analyze spend, budgets, anomalies, recommendations, and perspectives through MCP tools.",
+  "type": "module",
+  "main": "build/index.js",
+  "bin": {
+    "harness-ccm-finops-mcp": "build/index.js"
+  },
+  "files": [
+    "build/"
+  ],
+  "scripts": {
+    "build": "tsc && npm run build:copy-assets",
+    "build:copy-assets": "node -e \"const fs=require('fs'),path=require('path');fs.cpSync('src/report-renderer/static','build/report-renderer/static',{recursive:true});console.log('Copied report-renderer static assets');fs.mkdirSync('build/docs',{recursive:true});fs.copyFileSync('src/docs/finops-guide.md','build/docs/finops-guide.md');console.log('Copied finops-guide.md');\"",
+    "dev": "npm run build && concurrently \"npm:dev:watch\" \"npm:dev:serve\"",
+    "dev:watch": "tsc --watch",
+    "dev:serve": "nodemon --watch build --ext js --delay 1 --exec \"node --env-file=.env build/index.js http\"",
+    "start": "node build/index.js stdio",
+    "start:http": "node build/index.js http",
+    "inspect": "npx @modelcontextprotocol/inspector node build/index.js stdio",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "docker:build": "docker build -t harness-ccm-finops-mcp .",
+    "docker:run": "docker run --rm -p 3000:3000 --env-file .env harness-ccm-finops-mcp",
+    "prepublishOnly": "pnpm build"
+  },
+  "keywords": [
+    "mcp",
+    "harness",
+    "harness-ccm",
+    "finops",
+    "cloud-cost-management",
+    "model-context-protocol",
+    "ai-agent"
+  ],
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thisrohangupta/harness-mcp-v2.git"
+  },
+  "bugs": {
+    "url": "https://github.com/thisrohangupta/harness-mcp-v2/issues"
+  },
+  "homepage": "https://github.com/thisrohangupta/harness-mcp-v2#readme",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.27.1",
+    "@napi-rs/canvas": "^0.1.97",
+    "chokidar": "^5.0.0",
+    "express": "^5.2.1",
+    "gray-matter": "^4.0.3",
+    "markdown-it": "^14.1.1",
+    "markdown-it-anchor": "^9.2.0",
+    "markdown-it-attrs": "^4.3.1",
+    "markdown-it-container": "^4.0.0",
+    "markdown-it-deflist": "^3.0.0",
+    "markdown-it-footnote": "^4.0.0",
+    "markdown-it-task-lists": "^2.1.1",
+    "marked": "^15.0.0",
+    "pagedjs": "^0.4.3",
+    "pdfkit": "^0.16.0",
+    "playwright": "^1.59.1",
+    "slugify": "^1.6.9",
+    "yaml": "^2.8.2",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/markdown-it": "^14.1.2",
+    "@types/node": "^22.13.5",
+    "@types/pdfkit": "^0.13.9",
+    "concurrently": "^9.1.2",
+    "nodemon": "^3.1.9",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.6"
+  },
+  "packageManager": "pnpm@10.18.2",
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

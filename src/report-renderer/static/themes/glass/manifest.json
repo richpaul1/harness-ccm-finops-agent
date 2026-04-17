@@ -1,0 +1,11 @@
+{
+  "id": "glass",
+  "name": "Liquid Glass",
+  "description": "Adaptive-transparency design: translucent glass panels float over a living atmospheric gradient. Layers blur, refract light, and shift dynamically as you scroll.",
+  "brand": {
+    "wordmark": "Harness",
+    "sub": "Liquid · CCM Report"
+  },
+  "fonts": "https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap",
+  "pageSize": "A4"
+}

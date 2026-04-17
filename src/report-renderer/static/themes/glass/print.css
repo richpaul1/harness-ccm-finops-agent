@@ -1,0 +1,215 @@
+/* =============================================================
+   GLASS — print / PDF
+   backdrop-filter is unreliable in Chromium's PDF pipeline, so
+   we bake the frosted look using layered translucent gradients,
+   soft shadows and hairline top highlights.
+   ============================================================= */
+
+@page {
+  size: A4;
+  margin: 20mm 18mm 20mm 18mm;
+}
+
+@page :first { margin: 0; }
+@page cover { margin: 0; }
+
+@page toc {
+  margin: 22mm 18mm 22mm 18mm;
+  @bottom-center {
+    content: counter(page);
+    font-family: "JetBrains Mono", monospace;
+    font-size: 9pt;
+    color: #60647a;
+  }
+}
+
+@page main {
+  margin: 22mm 18mm 22mm 18mm;
+  @top-left {
+    content: string(doc-customer);
+    font-family: "JetBrains Mono", monospace;
+    font-size: 8.5pt;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #60647a;
+  }
+  @top-right {
+    content: string(doc-section);
+    font-family: "JetBrains Mono", monospace;
+    font-size: 8.5pt;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #60647a;
+  }
+  @bottom-left {
+    content: "Harness · Liquid · Confidential";
+    font-family: "JetBrains Mono", monospace;
+    font-size: 8.5pt;
+    color: #8b8fa3;
+  }
+  @bottom-right {
+    content: counter(page) " / " counter(pages);
+    font-family: "JetBrains Mono", monospace;
+    font-size: 9pt;
+    color: #12131a;
+    font-weight: 500;
+  }
+}
+
+.print-doc .doc-body h1 { string-set: doc-section content(); }
+
+.print-doc { font-size: 10.5pt; line-height: 1.6; }
+
+.print-doc .app-sidebar,
+.print-doc #export-pdf { display: none !important; }
+
+/* =============================================================
+   Atmosphere — static mesh baked in for print
+   Each page pulls the gradient behind it; we disable blur/drift.
+   ============================================================= */
+.print-doc .atmosphere {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+}
+.print-doc .atmo { filter: blur(60px); opacity: 0.55; }
+
+/* Replace backdrop-filter with baked translucent glass surfaces.
+   Every .glass element becomes a soft-white card with hairline
+   top highlight and realistic depth shadow. */
+.print-doc .glass {
+  background: rgba(255, 255, 255, 0.92) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.8) inset,
+    0 0 0 1px rgba(255, 255, 255, 0.5) inset,
+    0 12px 32px rgba(18, 19, 26, 0.08),
+    0 3px 8px rgba(18, 19, 26, 0.04) !important;
+}
+
+/* Cover — keep the vivid atmosphere; make the card really float */
+.print-doc .cover-page {
+  page: cover;
+  margin: 0;
+  padding: 24mm 22mm 22mm;
+  min-height: 297mm;
+  height: 297mm;
+  border-radius: 0;
+  page-break-after: always;
+  overflow: hidden;
+}
+.print-doc .cover-atmosphere { border-radius: 0; }
+.print-doc .cover-card {
+  background: rgba(255, 255, 255, 0.82) !important;
+  backdrop-filter: none !important;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.9) inset,
+    0 0 0 1px rgba(255, 255, 255, 0.6) inset,
+    0 32px 80px rgba(18, 19, 26, 0.18),
+    0 8px 20px rgba(18, 19, 26, 0.1) !important;
+}
+.print-doc .cover-classification {
+  background: rgba(255, 255, 255, 0.75) !important;
+  backdrop-filter: none !important;
+}
+
+/* TOC */
+.print-doc .toc-page {
+  page: toc;
+  page-break-before: always;
+  page-break-after: always;
+  margin: 0;
+}
+.print-doc .print-toc-wrap {
+  background: rgba(255, 255, 255, 0.82) !important;
+}
+.print-doc .print-toc a::after {
+  content: target-counter(attr(href), page);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10pt;
+  color: #12131a;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  margin-left: 10px;
+}
+.print-doc .print-toc .toc-l2 a::after {
+  color: #60647a;
+  font-size: 9.5pt;
+}
+
+/* Body — page container */
+.print-doc .doc-body { page: main; page-break-before: always; }
+
+/* Heading page-break rules */
+.print-doc .doc-body h1 { page-break-before: always; }
+.print-doc .doc-body h1:first-child { page-break-before: auto; }
+.print-doc .doc-body h2,
+.print-doc .doc-body h3 { page-break-after: avoid; }
+.print-doc .doc-body figure,
+.print-doc .doc-body .callout,
+.print-doc .doc-body table,
+.print-doc .metric-grid { page-break-inside: avoid; }
+
+/* Remove backdrop-filter on every nested glassy element in print */
+.print-doc .doc-body table,
+.print-doc .doc-body blockquote,
+.print-doc .doc-body figure.figure,
+.print-doc .callout,
+.print-doc .metric-card,
+.print-doc .print-toc-wrap {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+.print-doc .doc-body table {
+  background: rgba(255, 255, 255, 0.88) !important;
+}
+.print-doc .doc-body blockquote {
+  background: rgba(255, 255, 255, 0.75) !important;
+}
+.print-doc .doc-body figure.figure {
+  background: rgba(255, 255, 255, 0.82) !important;
+}
+.print-doc .metric-card {
+  background: rgba(255, 255, 255, 0.9) !important;
+}
+.print-doc .callout-critical { background: #fff3f4 !important; }
+.print-doc .callout-risk,
+.print-doc .callout-warning { background: #fff7e8 !important; }
+.print-doc .callout-success { background: #ecf9f3 !important; }
+.print-doc .callout-info,
+.print-doc .callout-quote { background: #edf2ff !important; }
+.print-doc .callout-action { background: #f1ebff !important; }
+
+/* Print-sized typography */
+.print-doc .page-title { font-size: 38pt; margin-bottom: 36px; }
+.print-doc .cover-title { font-size: 56pt; }
+.print-doc .cover-subtitle { font-size: 14pt; }
+.print-doc .cover-meta-value { font-size: 16pt; }
+.print-doc .doc-body h1 { font-size: 34pt; margin: 0 0 20px; }
+.print-doc .doc-body h1::before { margin-bottom: 16px; font-size: 9pt; }
+.print-doc .doc-body h2 { font-size: 20pt; margin: 32px 0 14px; }
+.print-doc .doc-body h3 { font-size: 12pt; margin: 22px 0 10px; }
+.print-doc .doc-body p { max-width: none; font-size: 10.5pt; }
+.print-doc .doc-body li { font-size: 10.5pt; }
+.print-doc .doc-body table { font-size: 9.5pt; }
+.print-doc .doc-body thead th { font-size: 8pt; padding: 10px 14px; }
+.print-doc .doc-body tbody td { padding: 10px 14px; }
+.print-doc .metric-card .metric-value { font-size: 28pt; }
+.print-doc .metric-card { padding: 16px 20px 20px; }
+.print-doc .callout { padding: 14px 20px; font-size: 10pt; }
+.print-doc .doc-body figure.figure img { max-height: 175mm; object-fit: contain; }
+.print-doc .doc-body figure figcaption { font-size: 8.5pt; }
+
+/* Paged.js fixes */
+.pagedjs_page .pagedjs_page_content { overflow: visible; }
+.pagedjs_page {
+  page-break-after: always !important;
+  break-after: page !important;
+  page-break-inside: avoid !important;
+  break-inside: avoid !important;
+}
+.pagedjs_page:last-of-type {
+  page-break-after: avoid !important;
+  break-after: avoid !important;
+}

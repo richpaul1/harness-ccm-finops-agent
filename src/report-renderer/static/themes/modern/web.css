@@ -1,0 +1,241 @@
+/* =============================================================
+   MODERN — web app shell
+   Clean light sidebar, generous padding, reading-focused main
+   ============================================================= */
+
+body.theme-modern.mode-web { background: var(--m-bg-soft); }
+
+.theme-modern .app-shell {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  min-height: 100vh;
+}
+
+/* ---------------- Sidebar (light, not dark) ---------------- */
+.theme-modern .app-sidebar {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  height: 100vh;
+  overflow-y: auto;
+  background: var(--m-bg);
+  border-right: 1px solid var(--m-line);
+  padding: 32px 28px 36px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  font-family: var(--font-sans);
+}
+
+.theme-modern .sidebar-brand {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.theme-modern .sidebar-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.theme-modern .sidebar-logo-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--m-coral);
+}
+.theme-modern .sidebar-logo-text {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 17px;
+  letter-spacing: -0.02em;
+  color: var(--m-ink);
+}
+.theme-modern .sidebar-sub {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--m-muted);
+  padding-left: 19px;
+}
+
+/* ---------------- Export button ---------------- */
+.theme-modern .btn {
+  font-family: var(--font-sans);
+  font-weight: 500;
+  font-size: 13px;
+  padding: 10px 16px;
+  border-radius: var(--radius);
+  border: 0;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  white-space: nowrap;
+}
+.theme-modern .btn-primary {
+  background: var(--m-ink);
+  color: #fff;
+}
+.theme-modern .btn-primary:hover { background: var(--m-accent); transform: translateY(-1px); }
+.theme-modern .btn-primary:active { transform: translateY(0); }
+.theme-modern .btn-primary:disabled { opacity: 0.6; cursor: wait; }
+
+/* ---------------- Meta block ---------------- */
+.theme-modern .sidebar-meta {
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--m-line);
+}
+.theme-modern .sidebar-kicker {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--m-coral);
+  font-weight: 500;
+  margin-bottom: 10px;
+}
+.theme-modern .sidebar-title {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 500;
+  line-height: 1.2;
+  color: var(--m-ink);
+  letter-spacing: -0.02em;
+}
+.theme-modern .sidebar-sub-meta {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--m-muted);
+  flex-wrap: wrap;
+}
+
+/* ---------------- Theme switcher ---------------- */
+.theme-modern .theme-switch {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--m-line);
+}
+.theme-modern .theme-switch-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--m-muted);
+  font-weight: 500;
+}
+.theme-modern .theme-switch select {
+  appearance: none;
+  background: var(--m-bg);
+  color: var(--m-ink);
+  border: 1px solid var(--m-line-2);
+  border-radius: var(--radius-sm);
+  padding: 9px 12px;
+  padding-right: 30px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%230a0b0e' d='M0 0h10L5 6z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  transition: border-color 0.12s;
+}
+.theme-modern .theme-switch select:hover { border-color: var(--m-ink); }
+.theme-modern .theme-switch select:focus {
+  outline: 2px solid var(--m-accent);
+  outline-offset: 1px;
+}
+
+/* ---------------- TOC ---------------- */
+.theme-modern .sidebar-toc {
+  flex: 1;
+  overflow-y: auto;
+  font-size: 13.5px;
+}
+.theme-modern .toc-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  counter-reset: side-toc;
+}
+.theme-modern .toc-list .toc-l1 { counter-increment: side-toc; }
+.theme-modern .toc-list .toc-l1 > a::before {
+  content: counter(side-toc, decimal-leading-zero);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--m-coral);
+  font-weight: 500;
+  margin-right: 12px;
+  letter-spacing: 0.06em;
+}
+.theme-modern .toc-list a {
+  display: block;
+  padding: 8px 10px;
+  color: var(--m-body);
+  text-decoration: none;
+  border-left: 2px solid transparent;
+  transition: all 0.12s;
+  border-radius: 0 3px 3px 0;
+  font-size: 13.5px;
+  font-weight: 500;
+}
+.theme-modern .toc-list a:hover {
+  color: var(--m-ink);
+  background: var(--m-bg-soft);
+}
+.theme-modern .toc-list a.active {
+  color: var(--m-ink);
+  background: var(--m-bg-soft);
+  border-left-color: var(--m-coral);
+}
+.theme-modern .toc-list .toc-l2 a {
+  padding-left: 36px;
+  font-size: 12.5px;
+  font-weight: 400;
+  color: var(--m-muted);
+}
+.theme-modern .toc-list .toc-l2 a.active { color: var(--m-ink); }
+
+/* ---------------- Main area ---------------- */
+.theme-modern .app-main {
+  background: var(--m-bg);
+  min-width: 0;
+}
+.theme-modern .doc-container {
+  padding: 72px 88px 200px;
+}
+
+@media (min-width: 1500px) {
+  .theme-modern .app-main {
+    background: var(--m-bg-soft);
+    padding: 40px;
+  }
+  .theme-modern .doc-container {
+    background: var(--m-bg);
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 96px 104px 200px;
+    border-radius: 8px;
+    box-shadow: var(--shadow-lg);
+  }
+}
+
+html { scroll-behavior: smooth; scroll-padding-top: 24px; }
+
+@media (max-width: 900px) {
+  .theme-modern .app-shell { grid-template-columns: 1fr; }
+  .theme-modern .app-sidebar { position: relative; height: auto; }
+  .theme-modern .doc-container { padding: 40px 28px 100px; }
+  .theme-modern .cover-page {
+    margin: 0 -28px 48px;
+    padding: 36px 32px 40px;
+    min-height: 560px;
+  }
+  .theme-modern .cover-title { font-size: 48px; }
+}

@@ -1,0 +1,11 @@
+{
+  "id": "harness",
+  "name": "Harness Executive",
+  "description": "Corporate executive theme: navy + amber, Fraunces display serif, traditional BVR layout.",
+  "brand": {
+    "wordmark": "HARNESS",
+    "sub": "Cloud Cost Management"
+  },
+  "fonts": "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&display=swap",
+  "pageSize": "A4"
+}

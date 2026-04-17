@@ -1,0 +1,166 @@
+function tocHtml(toc) {
+  if (!toc.length) return "";
+  const items = toc
+    .filter((h) => h.level <= 2)
+    .map(
+      (h) =>
+        `<li class="toc-l${h.level}"><a href="#${h.id}" data-id="${h.id}">${h.text}</a></li>`
+    )
+    .join("\n");
+  return `<ol class="toc-list">${items}</ol>`;
+}
+
+function printTocHtml(toc) {
+  if (!toc.length) return "";
+  let h1Index = 0;
+  const items = toc
+    .filter((h) => h.level <= 2)
+    .map((h) => {
+      const num = h.level === 1
+        ? `<span class="toc-num">${String(++h1Index).padStart(2, "0")}</span>`
+        : "";
+      return `<li class="toc-l${h.level}"><a href="#${h.id}">${num}<span class="toc-text">${h.text}</span><span class="toc-leader"></span></a></li>`;
+    })
+    .join("\n");
+  return `<ol class="print-toc">${items}</ol>`;
+}
+
+function themeSwitcher(themes, active) {
+  if (!themes || themes.length < 2) return "";
+  const opts = themes
+    .map(
+      (t) =>
+        `<option value="${t.id}" ${t.id === active ? "selected" : ""}>${t.name}</option>`
+    )
+    .join("");
+  return `<label class="theme-switch">
+    <span class="theme-switch-label">Theme</span>
+    <select id="theme-select">${opts}</select>
+  </label>`;
+}
+
+export function renderShell({
+  meta,
+  html,
+  toc,
+  mode = "web",
+  liveReload = false,
+  theme,
+  themes = [],
+}) {
+  const isPrint = mode === "print";
+  const title = `${meta.title} · ${meta.customer || meta.author}`;
+  const themeBase = `/_report/themes/${theme.id}`;
+
+  const coverBlock = `
+    <section class="cover-page" id="cover">
+      <header class="cover-brand">
+        <div class="cover-wordmark">
+          <span class="brand-mark">${theme.brand.wordmark}</span>
+          <span class="brand-sub">${theme.brand.sub}</span>
+        </div>
+        <div class="cover-classification">${meta.classification || ""}</div>
+      </header>
+
+      <div class="cover-art" aria-hidden="true">
+        <div class="cover-art-grid"></div>
+        <div class="cover-art-accent"></div>
+      </div>
+
+      <div class="cover-main">
+        <div class="cover-doctype">${meta.docType || ""}</div>
+        <h1 class="cover-title">${meta.title}</h1>
+        ${meta.subtitle ? `<div class="cover-subtitle">${meta.subtitle}</div>` : ""}
+      </div>
+
+      <footer class="cover-footer">
+        <div class="cover-customer-block">
+          <div class="cover-customer-label">Prepared for</div>
+          <div class="cover-customer-name">${meta.customer || ""}</div>
+        </div>
+        <div class="cover-meta">
+          <div><span class="cover-meta-label">Date</span>${meta.date || ""}</div>
+          <div><span class="cover-meta-label">Prepared by</span>${meta.author || ""}</div>
+        </div>
+      </footer>
+    </section>
+  `;
+
+  const tocBlock = `
+    <section class="page-break-before toc-page" id="table-of-contents">
+      <div class="section-marker"><span>Contents</span></div>
+      <h1 class="page-title">Table of Contents</h1>
+      ${printTocHtml(toc)}
+    </section>
+  `;
+
+  const reloadScript = liveReload
+    ? `<script>
+        const es = new EventSource("/_reload");
+        es.onmessage = (e) => { if (e.data === "reload") location.reload(); };
+      </script>`
+    : "";
+
+  const appShellStart = isPrint
+    ? `<main class="print-doc">`
+    : `<div class="app-shell">
+         <nav class="app-sidebar" aria-label="Table of contents">
+           <div class="sidebar-head">
+             <div class="sidebar-brand">
+               <span class="brand-mark">${theme.brand.wordmark}</span>
+               <span class="brand-sub">CCM Reports</span>
+             </div>
+             <button class="btn btn-primary" id="export-pdf">Export PDF</button>
+           </div>
+           <div class="sidebar-meta">
+             <div class="sidebar-doctype">${meta.docType || ""}</div>
+             <div class="sidebar-title">${meta.title}</div>
+             <div class="sidebar-customer">${meta.customer || ""} · ${meta.date || ""}</div>
+           </div>
+           ${themeSwitcher(themes, theme.id)}
+           <div class="sidebar-toc">${tocHtml(toc)}</div>
+         </nav>
+         <main class="app-main">
+           <div class="doc-container">`;
+
+  const appShellEnd = isPrint ? `</main>` : `</div></main></div>`;
+
+  const pagedjsBoot = isPrint
+    ? `<script src="/_report/vendor/paged.polyfill.js"></script>
+       <script>
+         class HarnessHandler extends Paged.Handler {
+           constructor(chunker, polisher, caller) { super(chunker, polisher, caller); }
+           afterRendered() { window.__PAGED_READY__ = true; }
+         }
+         Paged.registerHandlers(HarnessHandler);
+       </script>`
+    : `<script type="module" src="${themeBase}/app.js"></script>
+       <script type="module" src="/_report/public/theme-switch.js"></script>`;
+
+  return `<!doctype html>
+<html lang="en" data-mode="${mode}" data-theme="${theme.id}">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>${title}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="${theme.fonts}" />
+  <link rel="stylesheet" href="${themeBase}/theme.css" />
+  ${isPrint
+    ? `<link rel="stylesheet" href="${themeBase}/print.css" />`
+    : `<link rel="stylesheet" href="${themeBase}/web.css" />`}
+</head>
+<body class="mode-${mode} theme-${theme.id}">
+  ${appShellStart}
+    ${coverBlock}
+    ${tocBlock}
+    <article class="doc-body">
+      ${html}
+    </article>
+  ${appShellEnd}
+  ${pagedjsBoot}
+  ${reloadScript}
+</body>
+</html>`;
+}

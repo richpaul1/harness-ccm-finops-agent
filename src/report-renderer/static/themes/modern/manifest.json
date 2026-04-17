@@ -1,0 +1,11 @@
+{
+  "id": "modern",
+  "name": "Modern Editorial",
+  "description": "Bold editorial theme: grotesque display type, generous whitespace, single vibrant accent, monochrome base.",
+  "brand": {
+    "wordmark": "Harness",
+    "sub": "Finops Report"
+  },
+  "fonts": "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap",
+  "pageSize": "A4"
+}

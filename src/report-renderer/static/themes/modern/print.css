@@ -1,0 +1,138 @@
+/* =============================================================
+   MODERN — print / PDF view (Paged.js)
+   ============================================================= */
+
+@page {
+  size: A4;
+  margin: 20mm 20mm 20mm 20mm;
+}
+
+@page :first { margin: 0; }
+@page cover { margin: 0; }
+
+@page toc {
+  margin: 20mm 20mm 20mm 20mm;
+  @bottom-center {
+    content: counter(page);
+    font-family: "JetBrains Mono", monospace;
+    font-size: 9pt;
+    color: #6b6f78;
+  }
+}
+
+@page main {
+  margin: 22mm 20mm 20mm 20mm;
+  @top-left {
+    content: string(doc-customer);
+    font-family: "JetBrains Mono", monospace;
+    font-size: 8.5pt;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #6b6f78;
+  }
+  @top-right {
+    content: string(doc-section);
+    font-family: "JetBrains Mono", monospace;
+    font-size: 8.5pt;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #6b6f78;
+  }
+  @bottom-left {
+    content: "Harness · Confidential";
+    font-family: "JetBrains Mono", monospace;
+    font-size: 8.5pt;
+    letter-spacing: 0.05em;
+    color: #9aa0ab;
+  }
+  @bottom-right {
+    content: counter(page) " / " counter(pages);
+    font-family: "JetBrains Mono", monospace;
+    font-size: 9pt;
+    color: #0a0b0e;
+    font-weight: 500;
+  }
+}
+
+.print-doc .doc-body h1 { string-set: doc-section content(); }
+
+.print-doc { font-size: 10.5pt; line-height: 1.6; }
+
+.print-doc .app-sidebar,
+.print-doc #export-pdf { display: none !important; }
+
+/* Cover */
+.print-doc .cover-page {
+  page: cover;
+  margin: 0;
+  padding: 28mm 24mm 22mm;
+  min-height: 297mm;
+  height: 297mm;
+  border-radius: 0;
+  page-break-after: always;
+}
+
+/* TOC */
+.print-doc .toc-page {
+  page: toc;
+  page-break-before: always;
+  page-break-after: always;
+  margin: 0;
+}
+.print-doc .print-toc a::after {
+  content: target-counter(attr(href), page);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10pt;
+  color: #0a0b0e;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  margin-left: 10px;
+}
+.print-doc .print-toc .toc-l2 a::after { color: #6b6f78; font-size: 9.5pt; }
+
+/* Main document */
+.print-doc .doc-body { page: main; page-break-before: always; }
+
+/* Heading + break rules */
+.print-doc .doc-body h1 { page-break-before: always; }
+.print-doc .doc-body h1:first-child { page-break-before: auto; }
+.print-doc .doc-body h2,
+.print-doc .doc-body h3 { page-break-after: avoid; }
+.print-doc .doc-body figure,
+.print-doc .doc-body .callout,
+.print-doc .doc-body table,
+.print-doc .metric-grid { page-break-inside: avoid; }
+
+/* Print-sized typography */
+.print-doc .page-title { font-size: 40pt; margin-bottom: 40px; }
+.print-doc .cover-title { font-size: 52pt; }
+.print-doc .cover-subtitle { font-size: 14pt; }
+.print-doc .cover-foot-value { font-size: 16pt; }
+.print-doc .doc-body h1 { font-size: 36pt; margin: 0 0 24px; }
+.print-doc .doc-body h1::before { margin-bottom: 20px; font-size: 9pt; }
+.print-doc .doc-body h1::after { margin-top: 20px; }
+.print-doc .doc-body h2 { font-size: 20pt; margin: 36px 0 14px; }
+.print-doc .doc-body h3 { font-size: 14pt; margin: 26px 0 10px; }
+.print-doc .doc-body p { max-width: none; font-size: 10.5pt; line-height: 1.6; }
+.print-doc .doc-body li { font-size: 10.5pt; }
+.print-doc .doc-body table { font-size: 9.5pt; }
+.print-doc .doc-body thead th { font-size: 8pt; padding: 10px 12px; }
+.print-doc .doc-body tbody td { padding: 10px 12px; }
+.print-doc .metric-card .metric-value { font-size: 28pt; }
+.print-doc .metric-card { padding: 18px 20px 22px; }
+.print-doc .callout { padding: 16px 20px; font-size: 10pt; }
+.print-doc .doc-body figure.figure img { max-height: 180mm; object-fit: contain; }
+.print-doc .doc-body figure figcaption { font-size: 8.5pt; }
+
+/* Paged.js page fixes */
+.pagedjs_page .pagedjs_page_content { overflow: visible; }
+.pagedjs_page {
+  page-break-after: always !important;
+  break-after: page !important;
+  page-break-inside: avoid !important;
+  break-inside: avoid !important;
+}
+.pagedjs_page:last-of-type {
+  page-break-after: avoid !important;
+  break-after: avoid !important;
+}
