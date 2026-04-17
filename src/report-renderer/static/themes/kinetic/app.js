@@ -319,7 +319,7 @@ function setupExport() {
     exportBtn.disabled = true;
     if (label) label.textContent = "Rendering…";
     try {
-      const res = await fetch(`/pdf?theme=${encodeURIComponent(theme)}`, { method: "POST" });
+      const res = await fetch(`./pdf?theme=${encodeURIComponent(theme)}`, { method: "POST" });
       if (!res.ok) throw new Error(await res.text());
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);

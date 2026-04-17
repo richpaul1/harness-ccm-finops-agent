@@ -41,7 +41,7 @@ if (exportBtn) {
     exportBtn.textContent = "Rendering…";
     try {
       const theme = new URLSearchParams(location.search).get("theme") || "harness";
-      const res = await fetch(`/pdf?theme=${encodeURIComponent(theme)}`, {
+      const res = await fetch(`./pdf?theme=${encodeURIComponent(theme)}`, {
         method: "POST",
       });
       if (!res.ok) throw new Error(await res.text());

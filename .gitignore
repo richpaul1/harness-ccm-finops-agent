@@ -4,6 +4,7 @@ build/
 .env*
 *.tgz
 .DS_Store
+out
 
 
 

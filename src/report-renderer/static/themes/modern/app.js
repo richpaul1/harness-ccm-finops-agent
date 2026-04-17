@@ -42,7 +42,7 @@ if (exportBtn) {
     exportBtn.disabled = true;
     if (label) label.textContent = "Rendering…";
     try {
-      const res = await fetch(`/pdf?theme=${encodeURIComponent(theme)}`, {
+      const res = await fetch(`./pdf?theme=${encodeURIComponent(theme)}`, {
         method: "POST",
       });
       if (!res.ok) throw new Error(await res.text());

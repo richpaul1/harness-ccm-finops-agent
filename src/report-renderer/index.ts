@@ -233,7 +233,7 @@ export function mountReportRoutes(app: Express, opts: MountOptions = {}): void {
     if (!entry) {
       return res.status(404).send(
         `<pre>Report '${id}' not registered. ` +
-          `Register via the harness_ccm_finops_report_render MCP tool.</pre>`,
+          `Register via the harness_ccm_finops_report_render MCP tool. Ask for the report to rendered again.</pre>`,
       );
     }
     try {
