@@ -42,6 +42,17 @@ export interface RenderedDoc {
   sourcePath: string;
 }
 
+// CSS selectors cannot start with a digit (unescaped), so `## 1. Foo` slugged
+// as `1-foo` becomes an invalid `querySelector('#1-foo')` — Paged.js and our
+// TOC scroll-spy both call querySelector on heading ids, so a bare numeric
+// prefix throws and breaks pagination. Prepend `sec-` to keep ids stable-ish
+// while guaranteeing validity.
+function safeHeadingSlug(raw: string): string {
+  const base = slugify(raw, { lower: true, strict: true });
+  if (!base) return "section";
+  return /^[0-9]/.test(base) ? `sec-${base}` : base;
+}
+
 const md: MarkdownIt = new MarkdownIt({
   html: true,
   linkify: true,
@@ -49,7 +60,7 @@ const md: MarkdownIt = new MarkdownIt({
   breaks: false,
 })
   .use(markdownItAnchor, {
-    slugify: (s: string) => slugify(s, { lower: true, strict: true }),
+    slugify: safeHeadingSlug,
   })
   .use(markdownItAttrs)
   .use(markdownItDeflist)
@@ -91,7 +102,7 @@ export function buildToc(content: string): TocEntry[] {
     toc.push({
       level,
       text,
-      id: slugify(text, { lower: true, strict: true }),
+      id: safeHeadingSlug(text),
     });
   }
   return toc;

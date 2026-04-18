@@ -14,6 +14,7 @@ import { registerMarkdownToPdfTool } from "./markdown-to-pdf.js";
 import { registerCcmMaturityChartTool } from "./harness-ccm-maturity-chart.js";
 import { registerCcmReportRenderTool } from "./harness-ccm-report-render.js";
 import { registerCcmGuideTool } from "./harness-ccm-guide.js";
+import { registerCcmFinOpsCurriculumTool } from "./harness-ccm-finops-curriculum.js";
 
 export function registerAllTools(server: McpServer, registry: Registry, client: HarnessClient, config: Config): void {
   registerListTool(server, registry, client);
@@ -27,4 +28,5 @@ export function registerAllTools(server: McpServer, registry: Registry, client: 
   registerCcmMaturityChartTool(server, config);
   registerCcmReportRenderTool(server, config);
   registerCcmGuideTool(server);
+  registerCcmFinOpsCurriculumTool(server);
 }

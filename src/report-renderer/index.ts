@@ -244,6 +244,27 @@ export function mountReportRoutes(app: Express, opts: MountOptions = {}): void {
     }
   });
 
+  // Per-report PDF — register BEFORE the `/*splat` catch-all, otherwise the
+  // splat matches "download" as a filename and returns 404 before these land.
+  // The handlers themselves are defined further down (pdfHandler / reports map
+  // are available at request time via closure).
+  router.post("/reports/:id/pdf", (req, res) => {
+    const entry = reports.get(getParamId(req));
+    if (!entry) {
+      res.status(404).send("Report not found");
+      return;
+    }
+    void pdfHandler(req, res, entry.contentPath, "inline", `${prefix}/reports/${entry.id}/`);
+  });
+  router.get("/reports/:id/download", (req, res) => {
+    const entry = reports.get(getParamId(req));
+    if (!entry) {
+      res.status(404).send("Report not found");
+      return;
+    }
+    void pdfHandler(req, res, entry.contentPath, "download", `${prefix}/reports/${entry.id}/`);
+  });
+
   // /reports/:id/<anything> — serve any file under the report's baseDir. This
   // is what makes relative image URLs (`assets/chart.png`, `images/foo.svg`,
   // `inline.png`) resolve straight off disk — no copying, no separate mount.
@@ -326,23 +347,6 @@ export function mountReportRoutes(app: Express, opts: MountOptions = {}): void {
       res.status(500).send(String((err as Error).stack || err));
     }
   }
-
-  router.post("/reports/:id/pdf", (req, res) => {
-    const entry = reports.get(getParamId(req));
-    if (!entry) {
-      res.status(404).send("Report not found");
-      return;
-    }
-    void pdfHandler(req, res, entry.contentPath, "inline", `${prefix}/reports/${entry.id}/`);
-  });
-  router.get("/reports/:id/download", (req, res) => {
-    const entry = reports.get(getParamId(req));
-    if (!entry) {
-      res.status(404).send("Report not found");
-      return;
-    }
-    void pdfHandler(req, res, entry.contentPath, "download", `${prefix}/reports/${entry.id}/`);
-  });
 
   // Mount the strict router on the host app at the configured prefix
   app.use(prefix || "/", router);
