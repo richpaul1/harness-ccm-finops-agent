@@ -16,6 +16,7 @@ import markdownItTaskLists from "markdown-it-task-lists";
 import slugify from "slugify";
 import { calloutsPlugin } from "./plugins/callouts.js";
 import { preprocessMetricCards } from "./plugins/metric-cards.js";
+import { preprocessVoiceComments } from "./plugins/voice-narration.js";
 
 export interface DocMeta {
   title: string;
@@ -111,7 +112,7 @@ export function buildToc(content: string): TocEntry[] {
 export function renderDocument(filePath: string): RenderedDoc {
   const raw = fs.readFileSync(filePath, "utf8");
   const { data: frontmatter, content } = matter(raw);
-  const processed = preprocessMetricCards(content);
+  const processed = preprocessVoiceComments(preprocessMetricCards(content));
 
   const html = md.render(processed);
   const toc = buildToc(content);
