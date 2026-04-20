@@ -1,10 +1,8 @@
 ---
-title: Harness FinOps Agent — Features Showcase & Prompt Library
+title: Post Sales CCM FinOps Agent — Features Showcase & Prompt Library
 subtitle: Every deliverable the agent can produce, with sample outputs and ready-to-use prompts
-customer: Harness Product & Field Enablement
 docType: Features Showcase
 date: April 18, 2026
-author: Harness CCM FinOps Agent
 classification: Internal
 ---
 
@@ -16,6 +14,8 @@ This document has two parts:
 2. **Part 2 — Prompt library.** A tool-by-tool reference with 2–4 example prompts for every MCP function. Use this to answer *"how do I ask it to do that thing?"*
 
 All sample charts and diagrams in Part 1 were rendered **by the agent itself**, using the same tools you are about to read about. No external design system, no separate BI dashboard.
+
+Please note a subset of these features are in active development to be supported by the official Harness MCP Server.
 
 ::: metrics
 - label: Feature families
