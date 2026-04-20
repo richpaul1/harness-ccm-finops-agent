@@ -15,6 +15,7 @@ import markdownItFootnote from "markdown-it-footnote";
 import markdownItTaskLists from "markdown-it-task-lists";
 import slugify from "slugify";
 import { calloutsPlugin } from "./plugins/callouts.js";
+import { preprocessCalloutSyntax } from "./plugins/callout-normalize.js";
 import { preprocessMetricCards } from "./plugins/metric-cards.js";
 import { preprocessVoiceComments } from "./plugins/voice-narration.js";
 
@@ -112,7 +113,9 @@ export function buildToc(content: string): TocEntry[] {
 export function renderDocument(filePath: string): RenderedDoc {
   const raw = fs.readFileSync(filePath, "utf8");
   const { data: frontmatter, content } = matter(raw);
-  const processed = preprocessVoiceComments(preprocessMetricCards(content));
+  const processed = preprocessVoiceComments(
+    preprocessMetricCards(preprocessCalloutSyntax(content)),
+  );
 
   const html = md.render(processed);
   const toc = buildToc(content);
