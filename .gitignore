@@ -5,4 +5,9 @@ build/
 .DS_Store
 out
 
-
+# This project uses pnpm as the package manager (see `packageManager` field
+# in package.json). Only `pnpm-lock.yaml` is the authoritative lockfile —
+# ignore npm/yarn lockfiles so a stray `npm install` / `yarn install` never
+# re-introduces them and causes dependency drift.
+package-lock.json
+yarn.lock
