@@ -15,7 +15,15 @@
  *
  * Replaced inline with raw HTML, which markdown-it (configured with
  * `html: true`) passes through untouched.
+ *
+ * Transform is scoped OUTSIDE fenced code blocks and inline code spans so
+ * authors can demonstrate the `::: metrics` pattern in their own markdown
+ * without it being silently rewritten (see ./protected-regions.ts). The
+ * protection is ESSENTIAL: the underlying regex is non-greedy and looks for
+ * the next `:::` line; without scoping it would happily consume a fence's
+ * closing ``` and cascade corruption through the rest of the document.
  */
+import { transformOutsideCode } from "./protected-regions.js";
 
 interface Card {
   label?: string;
@@ -80,7 +88,7 @@ function renderCards(cards: Card[]): string {
  */
 export function preprocessMetricCards(src: string): string {
   const regex = /^[ \t]*:::\s*metrics\s*\r?\n([\s\S]*?)^[ \t]*:::\s*$/gm;
-  return src.replace(regex, (_, body: string) => {
+  return transformOutsideCode(src, regex, (_match, body: string) => {
     const cards = parseCards(body);
     return renderCards(cards);
   });

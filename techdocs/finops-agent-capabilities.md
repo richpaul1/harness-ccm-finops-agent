@@ -10,6 +10,13 @@ classification: Internal · For product integration planning
 
 ## Executive Summary
 
+<!-- voice:
+Welcome to the Harness CCM FinOps Agent capabilities brief. Over the next few minutes
+we'll walk through every use case the agent supports today, the value it delivers to
+customers, and exactly how each piece is implemented so the product and engineering
+teams know what to integrate.
+-->
+
 The **Harness CCM FinOps Agent** is a Model Context Protocol (MCP) server that turns a customer's live cloud-billing, budget, recommendation, commitment, and governance data into **conversational FinOps workflows**. Any LLM-powered client (Claude Desktop, Cursor, ChatGPT apps, a Harness-native chat UI, an internal AI co-pilot) can connect to it and drive the same deterministic, audit-safe operations that the CE product UI exposes — without the user having to navigate a dashboard.
 
 This document is written for **Harness product and engineering**. It covers:
@@ -50,6 +57,13 @@ The cover page below was rendered from the same markdown you are reading, by the
 ---
 
 ## 1. Architecture at a glance
+
+<!-- voice:
+The agent is a single Node service. It speaks MCP over either standard input
+or streamable HTTP, exposes twelve tools, drives a registry of more than twenty
+cost resource types, and renders its own reports in process. There is no second
+codebase, no design system to maintain, and no extra deployment to operate.
+-->
 
 The FinOps Agent is a Node 20+ TypeScript service that speaks **MCP** over two transports. Everything else — tools, registry, HTTP client, report renderer — is composed inside a single process.
 
@@ -213,6 +227,14 @@ Each section below follows the same shape: **What it does → Why customers care
 ---
 
 ### Use case 7 — Budgets, health sweep, and forecasting
+
+<!-- voice:
+This is the highest leverage helper in the whole agent. One call classifies every
+budget into over budget, at risk, on track, or skipped, sorted by severity, with the
+perspective ID inline so the user can pivot straight to a cost breakdown. Promote
+this single endpoint inside the platform and every chat, voice, and Slack summary
+integration customers ask for becomes a thin wrapper.
+-->
 
 **What it does.** Two complementary primitives.
 

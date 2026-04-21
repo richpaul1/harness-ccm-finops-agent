@@ -14,6 +14,8 @@ import { fileURLToPath } from "node:url";
 import express, { type Express, type Request, type Response } from "express";
 import { renderDocument } from "./render.js";
 import { renderPdf } from "./pdf.js";
+import { renderVideo } from "./video.js";
+import { resolveTtsProvider, type TtsProviderName } from "./tts/factory.js";
 import {
   listThemes,
   resolveTheme,
@@ -54,6 +56,14 @@ export interface RegisterReportOptions {
 }
 
 const reports = new Map<string, ReportEntry>();
+
+/**
+ * Most recent rendered MP4 path per (reportId, themeId). Populated by the
+ * POST /reports/:id/video handler and consumed by GET /reports/:id/video.mp4
+ * so a user can hit the download URL straight from a browser without any
+ * round-trip through the MCP layer.
+ */
+const videoCache = new Map<string, string>();
 
 function hashPath(p: string): string {
   return crypto.createHash("sha1").update(path.resolve(p)).digest("hex").slice(0, 10);
@@ -265,6 +275,39 @@ export function mountReportRoutes(app: Express, opts: MountOptions = {}): void {
     void pdfHandler(req, res, entry.contentPath, "download", `${prefix}/reports/${entry.id}/`);
   });
 
+  // Per-report narrated video — same shape as the PDF endpoints, also
+  // registered BEFORE the `/*splat` catch-all so the splat doesn't swallow
+  // them. POST /video renders a fresh MP4 (synchronous; can take a minute);
+  // GET /video.mp4 streams the most recently rendered file for that
+  // (id, theme) pair so the user can hit it from a browser. The render
+  // module writes the MP4 to <cwd>/out/ and we cache its path in memory by
+  // (id, theme) so subsequent GETs Just Work without re-rendering.
+  router.post("/reports/:id/video", (req, res) => {
+    const entry = reports.get(getParamId(req));
+    if (!entry) {
+      res.status(404).send("Report not found");
+      return;
+    }
+    void videoHandler(req, res, entry, `${prefix}/reports/${entry.id}/`);
+  });
+  router.get("/reports/:id/video.mp4", (req, res) => {
+    const entry = reports.get(getParamId(req));
+    if (!entry) {
+      res.status(404).send("Report not found");
+      return;
+    }
+    const themeId = (req.query.theme as string | undefined) || "harness";
+    const cached = videoCache.get(`${entry.id}:${themeId}`);
+    if (!cached || !fs.existsSync(cached)) {
+      res.status(404).send(
+        "No video has been rendered for this report yet. " +
+          "POST to ./video first, or run the harness_ccm_finops_video_render MCP tool.",
+      );
+      return;
+    }
+    res.download(cached, path.basename(cached));
+  });
+
   // /reports/:id/<anything> — serve any file under the report's baseDir. This
   // is what makes relative image URLs (`assets/chart.png`, `images/foo.svg`,
   // `inline.png`) resolve straight off disk — no copying, no separate mount.
@@ -309,6 +352,67 @@ export function mountReportRoutes(app: Express, opts: MountOptions = {}): void {
   // a real browser would see — important for asset resolution.
   const baseUrlGetter = (): string => opts.publicBaseUrl ?? "";
 
+  async function videoHandler(
+    req: Request,
+    res: Response,
+    entry: ReportEntry,
+    docPath: string,
+  ): Promise<void> {
+    try {
+      const baseUrl = baseUrlGetter();
+      if (!baseUrl) {
+        res.status(500).send("Video export not available — public base URL not configured");
+        return;
+      }
+      const themeId = (req.query.theme as string | undefined) || "harness";
+      // Body is optional; if present it carries the same overrides the MCP
+      // tool exposes (voice, width/height/fps, min_dwell_ms). We type-narrow
+      // each field defensively because the route is reachable from any HTTP
+      // client, not just the MCP tool.
+      const body = (req.body || {}) as Record<string, unknown>;
+      // Allow the caller to pin a specific provider; otherwise resolve the
+      // first one whose env vars are present. Audio is cached on disk by
+      // default so re-renders only re-call TTS for changed narration.
+      const providerName = isTtsProviderName(body.tts_provider) ? body.tts_provider : undefined;
+      const tts = resolveTtsProvider({
+        ...(providerName ? { providerName } : {}),
+      });
+      const doc = renderDocument(entry.contentPath);
+      const result = await renderVideo({
+        baseUrl,
+        meta: doc.meta,
+        themeId,
+        docPath,
+        tts,
+        ...(typeof body.voice === "string" ? { voice: body.voice } : {}),
+        ...(typeof body.width === "number" ? { width: body.width } : {}),
+        ...(typeof body.height === "number" ? { height: body.height } : {}),
+        ...(typeof body.fps === "number" ? { fps: body.fps } : {}),
+        ...(typeof body.min_dwell_ms === "number" ? { minDwellMs: body.min_dwell_ms } : {}),
+        ...(body.transitions === "cut" || body.transitions === "xfade"
+          ? { transitions: body.transitions }
+          : {}),
+        ...(typeof body.transition_ms === "number" ? { transitionMs: body.transition_ms } : {}),
+        ...(typeof body.ken_burns === "boolean" ? { kenBurns: body.ken_burns } : {}),
+        ...(typeof body.captions === "boolean" ? { captions: body.captions } : {}),
+      });
+      videoCache.set(`${entry.id}:${themeId}`, result.outPath);
+      res.json({
+        ok: true,
+        out_path: result.outPath,
+        file_name: result.fileName,
+        manifest_path: result.manifestPath,
+        download_url: `${baseUrl}/reports/${entry.id}/video.mp4?theme=${encodeURIComponent(themeId)}`,
+        total_duration_ms: result.totalDurationMs,
+        slides: result.slides.length,
+        narrated_slides: result.slides.filter((s) => s.audioFile).length,
+      });
+    } catch (err) {
+      log.error("Video export failed", { error: String((err as Error).message) });
+      res.status(500).send(String((err as Error).stack || err));
+    }
+  }
+
   async function pdfHandler(
     req: Request,
     res: Response,
@@ -350,6 +454,17 @@ export function mountReportRoutes(app: Express, opts: MountOptions = {}): void {
 
   // Mount the strict router on the host app at the configured prefix
   app.use(prefix || "/", router);
+}
+
+/** Narrow an arbitrary value to a known TTS provider name. */
+function isTtsProviderName(v: unknown): v is TtsProviderName {
+  return (
+    v === "openai" ||
+    v === "elevenlabs" ||
+    v === "azure" ||
+    v === "google" ||
+    v === "local"
+  );
 }
 
 // ─── Server URL coordination ────────────────────────────────────────────────
