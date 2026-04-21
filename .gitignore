@@ -1,7 +1,6 @@
 node_modules/
 build/
 .env
-.env*
 *.tgz
 .DS_Store
 out
