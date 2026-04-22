@@ -130,10 +130,20 @@ export function renderShell({
              </div>
            </div>
 
-           <button class="btn btn-primary" id="export-pdf" data-spring>
-             <span class="btn-label">Export PDF</span>
-             <span class="btn-arrow" aria-hidden="true">→</span>
-           </button>
+           <div class="export-menu" id="export-menu">
+             <button class="btn btn-icon btn-primary" data-export="pdf" data-spring title="Export PDF" aria-label="Export PDF">
+               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M12 18v-6"/><path d="m15 15-3 3-3-3"/></svg>
+               <span class="btn-label">Export PDF</span>
+             </button>
+             <button class="btn btn-icon" data-export="pptx" data-spring title="Export PowerPoint" aria-label="Export PowerPoint">
+               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="12" rx="1"/><path d="M12 15v4"/><path d="M8 21h8"/><path d="m7 10 3-3 3 3 4-5"/></svg>
+               <span class="btn-label">Export PowerPoint</span>
+             </button>
+             <button class="btn btn-icon" data-export="docx" data-spring title="Export Word" aria-label="Export Word">
+               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8"/><path d="M8 17h6"/></svg>
+               <span class="btn-label">Export Word</span>
+             </button>
+           </div>
 
            <div class="sidebar-meta">
              <div class="meta-label">Document</div>
@@ -172,7 +182,8 @@ export function renderShell({
          Paged.registerHandlers(KineticHandler);
        </script>`
     : `<script type="module" src="${themeBase}/app.js"></script>
-       <script type="module" src="/_report/public/theme-switch.js"></script>`;
+       <script type="module" src="/_report/public/theme-switch.js"></script>
+       <script type="module" src="/_report/public/export-menu.js"></script>`;
 
   return `<!doctype html>
 <html lang="en" data-mode="${mode}" data-theme="${theme.id}">

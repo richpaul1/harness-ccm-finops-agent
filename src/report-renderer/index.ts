@@ -12,9 +12,13 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import express, { type Express, type Request, type Response } from "express";
+import slugify from "slugify";
 import { renderDocument } from "./render.js";
 import { renderPdf } from "./pdf.js";
 import { renderVideo } from "./video.js";
+import { renderPptx } from "./pptx.js";
+import { markdownToDocx } from "../utils/markdown-to-docx.js";
+import { markdownToPptx } from "../utils/markdown-to-pptx.js";
 import { resolveTtsProvider, type TtsProviderName } from "./tts/factory.js";
 import {
   listThemes,
@@ -64,6 +68,14 @@ const reports = new Map<string, ReportEntry>();
  * round-trip through the MCP layer.
  */
 const videoCache = new Map<string, string>();
+
+/**
+ * Most recent rendered PPTX path per (reportId, themeId). Same shape as
+ * `videoCache` — POST /reports/:id/pptx renders the deck; GET /reports/:id/
+ * slides.pptx streams the most recently rendered file so a user can grab it
+ * from a browser without re-rendering.
+ */
+const pptxCache = new Map<string, string>();
 
 function hashPath(p: string): string {
   return crypto.createHash("sha1").update(path.resolve(p)).digest("hex").slice(0, 10);
@@ -308,6 +320,58 @@ export function mountReportRoutes(app: Express, opts: MountOptions = {}): void {
     res.download(cached, path.basename(cached));
   });
 
+  // Per-report PowerPoint export — mirrors the PDF endpoints exactly so the
+  // sidebar's Export menu can fetch + download in one shot. The render is
+  // synchronous (Playwright capture + pptxgenjs pack), typically 5-20s
+  // depending on page count. Result is cached on disk by (id, theme) so a
+  // subsequent browser GET just streams the pre-built file.
+  router.post("/reports/:id/pptx", (req, res) => {
+    const entry = reports.get(getParamId(req));
+    if (!entry) {
+      res.status(404).send("Report not found");
+      return;
+    }
+    void pptxHandler(req, res, entry, "inline", `${prefix}/reports/${entry.id}/`);
+  });
+  router.get("/reports/:id/slides.pptx", (req, res) => {
+    const entry = reports.get(getParamId(req));
+    if (!entry) {
+      res.status(404).send("Report not found");
+      return;
+    }
+    const themeId = (req.query.theme as string | undefined) || "harness";
+    const cached = pptxCache.get(`${entry.id}:${themeId}`);
+    if (!cached || !fs.existsSync(cached)) {
+      res.status(404).send(
+        "No PPTX has been rendered for this report yet. " +
+          "POST to ./pptx first, or run the harness_ccm_finops_pptx_render MCP tool.",
+      );
+      return;
+    }
+    res.download(cached, path.basename(cached));
+  });
+
+  // Per-report Word export. Unlike PDF/PPTX this is pure-JS (no Playwright),
+  // so the handler runs straight off the markdown file in milliseconds and
+  // there's no need for a "render-then-cache" split. Both routes do the same
+  // work; GET exists so the file can be shared via a plain URL.
+  router.post("/reports/:id/docx", (req, res) => {
+    const entry = reports.get(getParamId(req));
+    if (!entry) {
+      res.status(404).send("Report not found");
+      return;
+    }
+    void docxHandler(req, res, entry, "inline");
+  });
+  router.get("/reports/:id/report.docx", (req, res) => {
+    const entry = reports.get(getParamId(req));
+    if (!entry) {
+      res.status(404).send("Report not found");
+      return;
+    }
+    void docxHandler(req, res, entry, "download");
+  });
+
   // /reports/:id/<anything> — serve any file under the report's baseDir. This
   // is what makes relative image URLs (`assets/chart.png`, `images/foo.svg`,
   // `inline.png`) resolve straight off disk — no copying, no separate mount.
@@ -409,6 +473,103 @@ export function mountReportRoutes(app: Express, opts: MountOptions = {}): void {
       });
     } catch (err) {
       log.error("Video export failed", { error: String((err as Error).message) });
+      res.status(500).send(String((err as Error).stack || err));
+    }
+  }
+
+  async function pptxHandler(
+    req: Request,
+    res: Response,
+    entry: ReportEntry,
+    sendMode: "inline" | "download",
+    docPath: string,
+  ): Promise<void> {
+    try {
+      const themeId = (req.query.theme as string | undefined) || "harness";
+      const body = (req.body || {}) as Record<string, unknown>;
+      const slideSize =
+        body.slide_size === "16x9" || body.slide_size === "4x3"
+          ? (body.slide_size as "16x9" | "4x3")
+          : "16x9";
+
+      const doc = renderDocument(entry.contentPath);
+      const raw = await fs.promises.readFile(entry.contentPath, "utf-8");
+      // Strip YAML frontmatter — already parsed into doc.meta.
+      const markdown = raw.replace(/^---\n[\s\S]*?\n---\n/, "");
+
+      const buf = await markdownToPptx(markdown, {
+        title: doc.meta.title,
+        customer: doc.meta.customer,
+        date: doc.meta.date,
+        assetsDir: path.dirname(path.resolve(entry.contentPath)),
+        slideSize,
+      });
+
+      const slug = slugify(`${doc.meta.customer || "report"}-${doc.meta.title}`, {
+        lower: true,
+        strict: true,
+      });
+      const date = doc.meta.date || new Date().toISOString().slice(0, 10);
+      const fileName = `${slug}-${themeId}-${date}.pptx`;
+
+      // Cache to disk (keeps the GET /slides.pptx download URL working).
+      const outDir = path.resolve(process.cwd(), "out");
+      await new Promise<void>((resolve, reject) =>
+        fs.mkdir(outDir, { recursive: true }, err => (err ? reject(err) : resolve())),
+      );
+      const outPath = path.join(outDir, fileName);
+      await new Promise<void>((resolve, reject) =>
+        fs.writeFile(outPath, buf, err => (err ? reject(err) : resolve())),
+      );
+      pptxCache.set(`${entry.id}:${themeId}`, outPath);
+
+      if (sendMode === "inline") {
+        res.set({
+          "Content-Type":
+            "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+          "Content-Disposition": `attachment; filename="${fileName}"`,
+          "Content-Length": String(buf.length),
+        });
+        res.send(buf);
+      } else {
+        res.download(outPath, fileName);
+      }
+    } catch (err) {
+      log.error("PPTX export failed", { error: String((err as Error).message) });
+      res.status(500).send(String((err as Error).stack || err));
+    }
+  }
+
+  async function docxHandler(
+    req: Request,
+    res: Response,
+    entry: ReportEntry,
+    sendMode: "inline" | "download",
+  ): Promise<void> {
+    try {
+      const themeId = (req.query.theme as string | undefined) || "harness";
+      const doc = renderDocument(entry.contentPath);
+      // Strip YAML frontmatter — `renderDocument` already parsed it into
+      // `doc.meta`; leaving the raw frontmatter in the body would produce a
+      // leading code-block in the Word doc.
+      const raw = await fs.promises.readFile(entry.contentPath, "utf-8");
+      const body = raw.replace(/^---\n[\s\S]*?\n---\n/, "");
+      const buf = await markdownToDocx(body, { title: doc.meta.title });
+      const slug = slugify(`${doc.meta.customer || "report"}-${doc.meta.title}`, {
+        lower: true,
+        strict: true,
+      });
+      const date = doc.meta.date || new Date().toISOString().slice(0, 10);
+      const fileName = `${slug}-${themeId}-${date}.docx`;
+      res.set({
+        "Content-Type":
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "Content-Disposition": `${sendMode === "download" ? "attachment" : "attachment"}; filename="${fileName}"`,
+        "Content-Length": String(buf.length),
+      });
+      res.send(buf);
+    } catch (err) {
+      log.error("DOCX export failed", { error: String((err as Error).message) });
       res.status(500).send(String((err as Error).stack || err));
     }
   }
