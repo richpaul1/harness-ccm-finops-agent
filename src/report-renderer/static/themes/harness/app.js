@@ -1,4 +1,5 @@
-// Client app: TOC scrollspy, smooth scroll, export PDF button
+// Client app: TOC scrollspy + smooth scroll. The sidebar Export menu is
+// wired up by the shared /_report/public/export-menu.js module.
 const tocLinks = Array.from(document.querySelectorAll(".sidebar-toc a"));
 const headings = tocLinks
   .map((a) => ({ a, el: document.getElementById(a.dataset.id) }))
@@ -33,37 +34,3 @@ tocLinks.forEach((link) => {
   });
 });
 
-const exportBtn = document.getElementById("export-pdf");
-if (exportBtn) {
-  exportBtn.addEventListener("click", async () => {
-    const originalLabel = exportBtn.textContent;
-    exportBtn.disabled = true;
-    exportBtn.textContent = "Rendering…";
-    try {
-      const theme = new URLSearchParams(location.search).get("theme") || "harness";
-      const res = await fetch(`./pdf?theme=${encodeURIComponent(theme)}`, {
-        method: "POST",
-      });
-      if (!res.ok) throw new Error(await res.text());
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      const disp = res.headers.get("Content-Disposition") || "";
-      const nameMatch = disp.match(/filename="([^"]+)"/);
-      a.href = url;
-      a.download = nameMatch ? nameMatch[1] : "report.pdf";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-      exportBtn.textContent = "Exported ✓";
-      setTimeout(() => (exportBtn.textContent = originalLabel), 1600);
-    } catch (err) {
-      console.error(err);
-      exportBtn.textContent = "Error — retry";
-      setTimeout(() => (exportBtn.textContent = originalLabel), 2200);
-    } finally {
-      exportBtn.disabled = false;
-    }
-  });
-}

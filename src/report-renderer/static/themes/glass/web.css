@@ -152,6 +152,61 @@ body.theme-glass .atmo-4 { animation-duration: 36s; animation-delay: -18s; }
 .theme-glass .btn-primary:active { transform: translateY(0); }
 .theme-glass .btn-primary:disabled { opacity: 0.6; cursor: wait; }
 
+.theme-glass .export-menu {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.theme-glass .btn.btn-icon {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+.theme-glass .btn.btn-icon svg { display: block; }
+.theme-glass .btn.btn-icon .btn-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.theme-glass .export-menu::after {
+  content: "";
+  display: none;
+  flex-basis: 100%;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.65);
+  margin-top: 2px;
+}
+.theme-glass .export-menu:has(button:disabled)::after {
+  content: "Exporting…";
+  display: block;
+}
+/* Secondary buttons — muted glass, no gradient. Keeps PDF (primary) visually dominant. */
+.theme-glass .export-menu .btn:not(.btn-primary) {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--g-ink);
+  backdrop-filter: blur(14px) saturate(180%);
+  -webkit-backdrop-filter: blur(14px) saturate(180%);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.5) inset;
+}
+.theme-glass .export-menu .btn:not(.btn-primary):hover {
+  background: rgba(255, 255, 255, 0.14);
+  transform: translateY(-1px);
+}
+.theme-glass .export-menu .btn:disabled { opacity: 0.6; cursor: wait; }
+
 .theme-glass .sidebar-meta {
   padding-bottom: 20px;
   border-bottom: 1px solid var(--g-line);

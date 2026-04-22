@@ -308,41 +308,8 @@ function setupCoverCursor() {
   }, 1400);
 }
 
-// ─── 8. PDF export ─────────────────────────────────────────────
-function setupExport() {
-  const exportBtn = document.getElementById("export-pdf");
-  if (!exportBtn) return;
-  const label = exportBtn.querySelector(".btn-label");
-  exportBtn.addEventListener("click", async () => {
-    const theme = new URLSearchParams(location.search).get("theme") || "kinetic";
-    const orig = label?.textContent ?? exportBtn.textContent;
-    exportBtn.disabled = true;
-    if (label) label.textContent = "Rendering…";
-    try {
-      const res = await fetch(`./pdf?theme=${encodeURIComponent(theme)}`, { method: "POST" });
-      if (!res.ok) throw new Error(await res.text());
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      const disp = res.headers.get("Content-Disposition") || "";
-      const nameMatch = disp.match(/filename="([^"]+)"/);
-      a.href = url;
-      a.download = nameMatch ? nameMatch[1] : "report.pdf";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-      if (label) label.textContent = "Done";
-      setTimeout(() => { if (label) label.textContent = orig; }, 1500);
-    } catch (err) {
-      console.error(err);
-      if (label) label.textContent = "Retry";
-      setTimeout(() => { if (label) label.textContent = orig; }, 2000);
-    } finally {
-      exportBtn.disabled = false;
-    }
-  });
-}
+// PDF/PPTX/DOCX export wiring now lives in the shared
+// /_report/public/export-menu.js module loaded from template.js.
 
 // ─── Boot ──────────────────────────────────────────────────────
 window.addEventListener("scroll", updateProgress, { passive: true });
@@ -355,4 +322,3 @@ setupCounters();
 setupScrollspy();
 setupSpringButtons();
 setupCoverCursor();
-setupExport();
