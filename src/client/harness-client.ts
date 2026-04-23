@@ -90,6 +90,7 @@ export class HarnessClient {
   private readonly baseUrl: string;
   private readonly apiKey: string | undefined;
   private readonly bearerToken: string | undefined;
+  private readonly cookie: string | undefined;
   private readonly accountId: string;
   private readonly timeout: number;
   private readonly maxRetries: number;
@@ -99,6 +100,7 @@ export class HarnessClient {
     this.baseUrl = config.HARNESS_BASE_URL.replace(/\/$/, "");
     this.apiKey = config.HARNESS_API_KEY;
     this.bearerToken = config.HARNESS_BEARER_TOKEN;
+    this.cookie = config.HARNESS_COOKIE;
     this.accountId = config.HARNESS_ACCOUNT_ID;
     this.timeout = config.HARNESS_API_TIMEOUT_MS;
     this.maxRetries = config.HARNESS_MAX_RETRIES;
@@ -122,12 +124,15 @@ export class HarnessClient {
     };
 
     const ccmPath = options.path.includes("/ccm/") || options.path.includes("/lw/");
-    if (ccmPath && this.bearerToken) {
+    if (ccmPath && this.cookie) {
+      // Cookie auth takes precedence for CCM/LW paths — full browser session cookie string.
+      headers["Cookie"] = this.cookie;
+    } else if (ccmPath && this.bearerToken) {
       headers["Authorization"] = `Bearer ${this.bearerToken}`;
     } else {
       if (!this.apiKey) {
         throw new HarnessApiError(
-          "HARNESS_API_KEY is required for non-CCM requests. CCM paths can use HARNESS_BEARER_TOKEN instead.",
+          "HARNESS_API_KEY is required for non-CCM requests. CCM paths can use HARNESS_BEARER_TOKEN or HARNESS_COOKIE instead.",
           400,
         );
       }
