@@ -122,24 +122,8 @@ npx playwright install chromium
 }
 ```
 
-Start the server first with `pnpm start:http`, then connect Cursor.
+Start the server first with `npm start:http`, then connect Cursor.
 
-### Claude Desktop (`claude_desktop_config.json`) — stdio mode
-
-```json
-{
-  "mcpServers": {
-    "harness-finops": {
-      "command": "node",
-      "args": ["/absolute/path/to/harness-ccm-finops-agent/build/index.js", "stdio"],
-      "env": {
-        "HARNESS_API_KEY": "pat.xxx.xxx.xxx",
-        "HARNESS_ACCOUNT_ID": "your-account-id"
-      }
-    }
-  }
-}
-```
 
 ### HTTP health check and manual session
 
