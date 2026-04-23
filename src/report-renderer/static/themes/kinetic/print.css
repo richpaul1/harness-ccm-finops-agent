@@ -79,7 +79,7 @@
 /* Hide all web chrome */
 .print-doc .app-sidebar,
 .print-doc .reading-progress,
-.print-doc #export-pdf,
+.print-doc .export-menu,
 .print-doc .cover-scroll-hint { display: none !important; }
 .print-doc .cover-foot { grid-template-columns: 1fr 1fr; }
 

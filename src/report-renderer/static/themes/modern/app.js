@@ -33,42 +33,5 @@ tocLinks.forEach((link) => {
   });
 });
 
-const exportBtn = document.getElementById("export-pdf");
-if (exportBtn) {
-  const label = exportBtn.querySelector("span");
-  exportBtn.addEventListener("click", async () => {
-    const theme = new URLSearchParams(location.search).get("theme") || "modern";
-    const orig = label?.textContent ?? exportBtn.textContent;
-    exportBtn.disabled = true;
-    if (label) label.textContent = "Rendering…";
-    try {
-      const res = await fetch(`./pdf?theme=${encodeURIComponent(theme)}`, {
-        method: "POST",
-      });
-      if (!res.ok) throw new Error(await res.text());
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      const disp = res.headers.get("Content-Disposition") || "";
-      const nameMatch = disp.match(/filename="([^"]+)"/);
-      a.href = url;
-      a.download = nameMatch ? nameMatch[1] : "report.pdf";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-      if (label) label.textContent = "Exported";
-      setTimeout(() => {
-        if (label) label.textContent = orig;
-      }, 1600);
-    } catch (err) {
-      console.error(err);
-      if (label) label.textContent = "Error";
-      setTimeout(() => {
-        if (label) label.textContent = orig;
-      }, 2000);
-    } finally {
-      exportBtn.disabled = false;
-    }
-  });
-}
+// Sidebar Export menu is wired up by the shared
+// /_report/public/export-menu.js module.

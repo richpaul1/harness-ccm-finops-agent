@@ -59,7 +59,7 @@
 .print-doc { font-size: 10.5pt; line-height: 1.6; }
 
 .print-doc .app-sidebar,
-.print-doc #export-pdf { display: none !important; }
+.print-doc .export-menu { display: none !important; }
 
 /* Cover */
 .print-doc .cover-page {

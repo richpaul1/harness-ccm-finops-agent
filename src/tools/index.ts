@@ -11,9 +11,11 @@ import { registerCcmChartTool } from "./harness-ccm-chart.js";
 import { registerCcmCostCategoryPeriodChartTool } from "./harness-ccm-cost-category-period-chart.js";
 import { registerCcmBudgetHealthTool } from "./harness-ccm-budget-health.js";
 import { registerMarkdownToPdfTool } from "./markdown-to-pdf.js";
+import { registerMarkdownToDocxTool } from "./markdown-to-docx.js";
 import { registerCcmMaturityChartTool } from "./harness-ccm-maturity-chart.js";
 import { registerCcmReportRenderTool } from "./harness-ccm-report-render.js";
 import { registerCcmVideoRenderTool } from "./harness-ccm-video-render.js";
+import { registerCcmPptxRenderTool } from "./harness-ccm-pptx-render.js";
 import { registerCcmGuideTool } from "./harness-ccm-guide.js";
 import { registerCcmFinOpsCurriculumTool } from "./harness-ccm-finops-curriculum.js";
 
@@ -26,9 +28,11 @@ export function registerAllTools(server: McpServer, registry: Registry, client: 
   registerCcmCostCategoryPeriodChartTool(server, registry, client, config);
   registerCcmBudgetHealthTool(server, registry, client);
   registerMarkdownToPdfTool(server);
+  registerMarkdownToDocxTool(server);
   registerCcmMaturityChartTool(server, config);
   registerCcmReportRenderTool(server, config);
   registerCcmVideoRenderTool(server, config);
+  registerCcmPptxRenderTool(server, config);
   registerCcmGuideTool(server);
   registerCcmFinOpsCurriculumTool(server);
 }

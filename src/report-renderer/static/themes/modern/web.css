@@ -83,6 +83,58 @@ body.theme-modern.mode-web { background: var(--m-bg-soft); }
 .theme-modern .btn-primary:active { transform: translateY(0); }
 .theme-modern .btn-primary:disabled { opacity: 0.6; cursor: wait; }
 
+.theme-modern .export-menu {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.theme-modern .btn.btn-icon {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+.theme-modern .btn.btn-icon svg { display: block; }
+.theme-modern .btn.btn-icon .btn-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.theme-modern .export-menu .btn:not(.btn-primary) {
+  background: transparent;
+  color: var(--m-ink);
+  border: 1px solid var(--m-line);
+}
+.theme-modern .export-menu .btn:not(.btn-primary):hover {
+  background: var(--m-surface, rgba(0, 0, 0, 0.04));
+  transform: translateY(-1px);
+}
+.theme-modern .export-menu .btn:disabled { opacity: 0.6; cursor: wait; }
+.theme-modern .export-menu::after {
+  content: "";
+  display: none;
+  flex-basis: 100%;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--m-ink-muted, rgba(0, 0, 0, 0.55));
+  margin-top: 2px;
+}
+.theme-modern .export-menu:has(button:disabled)::after {
+  content: "Exporting…";
+  display: block;
+}
+
 /* ---------------- Meta block ---------------- */
 .theme-modern .sidebar-meta {
   padding-bottom: 24px;
