@@ -23,6 +23,13 @@ const RawConfigSchema = z
    * `Authorization: Bearer …` instead of `x-api-key`. Prefer PAT for automation.
    */
   HARNESS_BEARER_TOKEN: z.string().optional(),
+  /**
+   * Full browser session cookie string (copied from DevTools → Network → Cookie header).
+   * When set, requests to CCM/LW paths include a `Cookie: …` header. The cookie contains
+   * the session `token=` value and is the preferred auth for support/browser sessions.
+   * Takes precedence over HARNESS_BEARER_TOKEN when both are set on CCM paths.
+   */
+  HARNESS_COOKIE: z.string().optional(),
   HARNESS_ACCOUNT_ID: z.string().optional(),
   HARNESS_BASE_URL: z.string().url().default("https://app.harness.io"),
   HARNESS_DEFAULT_ORG_ID: z.string().default("default"),
@@ -50,10 +57,11 @@ const RawConfigSchema = z
   .superRefine((data, ctx) => {
     const hasKey = Boolean(data.HARNESS_API_KEY?.trim());
     const hasBearer = Boolean(data.HARNESS_BEARER_TOKEN?.trim());
-    if (!hasKey && !hasBearer) {
+    const hasCookie = Boolean(data.HARNESS_COOKIE?.trim());
+    if (!hasKey && !hasBearer && !hasCookie) {
       ctx.addIssue({
         code: "custom",
-        message: "Either HARNESS_API_KEY or HARNESS_BEARER_TOKEN is required",
+        message: "At least one auth method is required: HARNESS_API_KEY, HARNESS_BEARER_TOKEN, or HARNESS_COOKIE",
         path: ["HARNESS_API_KEY"],
       });
     }
@@ -62,14 +70,15 @@ const RawConfigSchema = z
 export const ConfigSchema = RawConfigSchema.transform((data) => {
   const apiKey = data.HARNESS_API_KEY?.trim() || undefined;
   const bearerToken = data.HARNESS_BEARER_TOKEN?.trim() || undefined;
+  const cookie = data.HARNESS_COOKIE?.trim() || undefined;
   const accountId =
     data.HARNESS_ACCOUNT_ID?.trim() || (apiKey ? extractAccountIdFromToken(apiKey) : undefined);
   if (!accountId) {
     throw new Error(
-      "HARNESS_ACCOUNT_ID is required when HARNESS_API_KEY is missing or not a PAT (pat.<accountId>.<tokenId>.<secret>). Set it explicitly when using HARNESS_BEARER_TOKEN only.",
+      "HARNESS_ACCOUNT_ID is required when HARNESS_API_KEY is missing or not a PAT (pat.<accountId>.<tokenId>.<secret>). Set it explicitly when using HARNESS_BEARER_TOKEN or HARNESS_COOKIE only.",
     );
   }
-  return { ...data, HARNESS_API_KEY: apiKey, HARNESS_BEARER_TOKEN: bearerToken, HARNESS_ACCOUNT_ID: accountId };
+  return { ...data, HARNESS_API_KEY: apiKey, HARNESS_BEARER_TOKEN: bearerToken, HARNESS_COOKIE: cookie, HARNESS_ACCOUNT_ID: accountId };
 });
 
 export type Config = z.infer<typeof ConfigSchema>;
