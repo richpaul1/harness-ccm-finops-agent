@@ -3,6 +3,8 @@
    Real backdrop-filter · scroll-adaptive atmosphere · parallax
    ============================================================= */
 
+body.theme-glass.mode-web .toc-page { display: none; }
+
 body.theme-glass.mode-web {
   min-height: 100vh;
   color: var(--g-ink);

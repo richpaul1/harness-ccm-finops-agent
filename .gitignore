@@ -12,3 +12,4 @@ scratch
 # re-introduces them and causes dependency drift.
 package-lock.json
 yarn.lock
+.env copy

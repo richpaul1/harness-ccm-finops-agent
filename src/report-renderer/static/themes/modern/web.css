@@ -5,6 +5,11 @@
 
 body.theme-modern.mode-web { background: var(--m-bg-soft); }
 
+/* The print TOC page is only meaningful in paginated PDF output (page numbers
+   come from Paged.js target-counter). Hide it in web view; the sidebar TOC
+   already serves navigation. */
+body.theme-modern.mode-web .toc-page { display: none; }
+
 .theme-modern .app-shell {
   display: grid;
   grid-template-columns: 300px 1fr;
