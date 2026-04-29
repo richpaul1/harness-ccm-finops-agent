@@ -4,6 +4,7 @@
    ============================================================= */
 
 body.theme-kinetic.mode-web { background: var(--k-bg); color: var(--k-ink); }
+body.theme-kinetic.mode-web .toc-page { display: none; }
 html { scroll-behavior: smooth; scroll-padding-top: 32px; }
 
 /* =============================================================
