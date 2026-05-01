@@ -111,6 +111,22 @@ export class HarnessClient {
     return this.accountId;
   }
 
+  get baseUrlPublic(): string {
+    return this.baseUrl;
+  }
+
+  /**
+   * Which auth method is configured for this client, in order of CCM-path
+   * precedence (cookie > bearer > apiKey). Useful for diagnostics like the
+   * whoami tool — never returns the credential value itself.
+   */
+  get authMethod(): "cookie" | "bearer" | "apiKey" | "none" {
+    if (this.cookie) return "cookie";
+    if (this.bearerToken) return "bearer";
+    if (this.apiKey) return "apiKey";
+    return "none";
+  }
+
   async request<T>(options: RequestOptions): Promise<T> {
     await this.rateLimiter.acquire();
 
@@ -129,14 +145,21 @@ export class HarnessClient {
       headers["Cookie"] = this.cookie;
     } else if (ccmPath && this.bearerToken) {
       headers["Authorization"] = `Bearer ${this.bearerToken}`;
-    } else {
-      if (!this.apiKey) {
-        throw new HarnessApiError(
-          "HARNESS_API_KEY is required for non-CCM requests. CCM paths can use HARNESS_BEARER_TOKEN or HARNESS_COOKIE instead.",
-          400,
-        );
-      }
+    } else if (this.apiKey) {
       headers["x-api-key"] = this.apiKey;
+    } else if (this.bearerToken) {
+      // Non-CCM path with no API key — fall back to the session JWT. Required
+      // for multi-tenant header-only sessions hitting endpoints like
+      // /ng/api/accounts/{accountId} (whoami) which accept Authorization: Bearer.
+      headers["Authorization"] = `Bearer ${this.bearerToken}`;
+    } else if (this.cookie) {
+      // Last-resort fallback for non-CCM paths when only a browser cookie is available.
+      headers["Cookie"] = this.cookie;
+    } else {
+      throw new HarnessApiError(
+        "No Harness credentials available for this request. Provide HARNESS_API_KEY, HARNESS_BEARER_TOKEN, or HARNESS_COOKIE (in .env, or as X-Harness-* request headers in HTTP transport mode).",
+        400,
+      );
     }
 
     if (options.body) {

@@ -5,7 +5,14 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { createMcpExpressApp } from "@modelcontextprotocol/sdk/server/express.js";
-import { loadConfig, type Config } from "./config.js";
+import {
+  buildSessionConfig,
+  loadGlobalConfig,
+  SessionAuthError,
+  type Config,
+  type GlobalConfig,
+  type SessionAuthOverrides,
+} from "./config.js";
 import { setLogLevel, createLogger } from "./utils/logger.js";
 import { HarnessClient } from "./client/harness-client.js";
 import { Registry } from "./registry/index.js";
@@ -24,6 +31,76 @@ function mcpJsonRpcMethodFromBody(body: unknown): string | undefined {
     if (typeof m === "string") return m;
   }
   return undefined;
+}
+
+/**
+ * Headers map shape Express produces (lower-case keys, possibly array values).
+ * We only consume the first value per header.
+ */
+type HeaderBag = Record<string, string | string[] | undefined>;
+
+function firstHeader(headers: HeaderBag, name: string): string | undefined {
+  const raw = headers[name.toLowerCase()];
+  if (raw === undefined) return undefined;
+  return Array.isArray(raw) ? raw[0] : raw;
+}
+
+/**
+ * Parse per-session Harness credential overrides from HTTP request headers.
+ * Returns only the fields that were supplied by the client; missing fields
+ * fall back to env defaults inside `buildSessionConfig`.
+ *
+ * Supported headers (case-insensitive):
+ *   - X-Harness-Token         → HARNESS_BEARER_TOKEN
+ *   - Authorization: Bearer … → HARNESS_BEARER_TOKEN (alternate)
+ *   - X-Harness-Cookie        → HARNESS_COOKIE
+ *   - X-Harness-Api-Key       → HARNESS_API_KEY
+ *   - X-Harness-Account       → HARNESS_ACCOUNT_ID
+ *   - X-Harness-Base-Url      → HARNESS_BASE_URL
+ *   - X-Harness-Default-Org   → HARNESS_DEFAULT_ORG_ID
+ *   - X-Harness-Default-Project → HARNESS_DEFAULT_PROJECT_ID
+ *
+ * Header values are NEVER logged or echoed back; only `buildSessionConfig`
+ * sees them, and the resulting Config is held in memory on the session entry.
+ */
+export function parseSessionAuthHeaders(headers: HeaderBag): SessionAuthOverrides {
+  const overrides: SessionAuthOverrides = {};
+
+  let token = firstHeader(headers, "x-harness-token");
+  if (!token) {
+    const auth = firstHeader(headers, "authorization");
+    if (auth && /^bearer\s+/i.test(auth)) {
+      token = auth.replace(/^bearer\s+/i, "").trim();
+    }
+  }
+  if (token) overrides.HARNESS_BEARER_TOKEN = token;
+
+  const cookie = firstHeader(headers, "x-harness-cookie");
+  if (cookie) overrides.HARNESS_COOKIE = cookie;
+
+  const apiKey = firstHeader(headers, "x-harness-api-key");
+  if (apiKey) overrides.HARNESS_API_KEY = apiKey;
+
+  const account = firstHeader(headers, "x-harness-account");
+  if (account) overrides.HARNESS_ACCOUNT_ID = account;
+
+  const baseUrl = firstHeader(headers, "x-harness-base-url");
+  if (baseUrl) overrides.HARNESS_BASE_URL = baseUrl;
+
+  const defaultOrg = firstHeader(headers, "x-harness-default-org");
+  if (defaultOrg) overrides.HARNESS_DEFAULT_ORG_ID = defaultOrg;
+
+  const defaultProject = firstHeader(headers, "x-harness-default-project");
+  if (defaultProject) overrides.HARNESS_DEFAULT_PROJECT_ID = defaultProject;
+
+  return overrides;
+}
+
+/** Tail-mask a token for logging — keeps the last 4 chars only. */
+function maskToken(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+  if (value.length <= 4) return "****";
+  return `****${value.slice(-4)}`;
 }
 
 /**
@@ -48,7 +125,12 @@ function createHarnessServer(config: Config): McpServer {
         "resource types, group_by dimensions, time filters, spike/anomaly patterns, " +
         "recommendations, budgets, commitment orchestration, AutoStopping, maturity charts, " +
         "report rendering, and the full BVR playbook. Without this guide you will not know " +
-        "how to use the other tools correctly.",
+        "how to use the other tools correctly.\n\n" +
+        "When the user asks identity questions like \"what account am I connected to?\", " +
+        "\"who am I?\", \"which Harness tenant is this?\", or anything similar — call " +
+        "harness_ccm_finops_whoami (no parameters) and quote the returned `companyName` " +
+        "(e.g. \"You're connected to TransUnion\"). Use the `summary` field for a one-line " +
+        "answer. Never guess the account from URLs or env vars.",
     },
   );
 
@@ -61,12 +143,21 @@ function createHarnessServer(config: Config): McpServer {
 
 /**
  * Start the server in stdio mode — single persistent connection.
+ * Stdio is single-tenant: there are no per-request headers, so the session
+ * config comes purely from env vars (`buildSessionConfig` with no overrides).
  */
-async function startStdio(config: Config): Promise<void> {
+async function startStdio(globalConfig: GlobalConfig): Promise<void> {
+  const config = buildSessionConfig(globalConfig, {});
   const server = createHarnessServer(config);
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  log.info("harness-ccm-finops-agent connected via stdio");
+  log.info("harness-ccm-finops-agent connected via stdio", {
+    accountId: config.HARNESS_ACCOUNT_ID,
+    baseUrl: config.HARNESS_BASE_URL,
+    tokenPresent: Boolean(config.HARNESS_BEARER_TOKEN),
+    cookiePresent: Boolean(config.HARNESS_COOKIE),
+    apiKeyPresent: Boolean(config.HARNESS_API_KEY),
+  });
 
   const shutdown = async (signal: string): Promise<void> => {
     log.info(`Received ${signal}, closing stdio transport...`);
@@ -101,19 +192,32 @@ const REAP_INTERVAL_MS = 60_000;    // check every minute
  * Uses the MCP SDK's Express adapter which provides automatic DNS rebinding protection
  * when bound to localhost (validates Host header against allowed hostnames).
  */
-async function startHttp(config: Config, port: number): Promise<void> {
+async function startHttp(globalConfig: GlobalConfig, port: number): Promise<void> {
   const host = process.env.HOST || "127.0.0.1";
   const app = createMcpExpressApp({ host });
 
-  const maxBodySize = config.HARNESS_MAX_BODY_SIZE_MB * 1024 * 1024;
+  const maxBodySize = globalConfig.HARNESS_MAX_BODY_SIZE_MB * 1024 * 1024;
   const { json } = await import("express");
   app.use(json({ limit: maxBodySize }));
 
-  // CORS — allow GET, POST, DELETE for session-based MCP
+  // CORS — allow GET, POST, DELETE for session-based MCP. The X-Harness-*
+  // headers carry per-session Harness credentials (see parseSessionAuthHeaders).
+  const allowedRequestHeaders = [
+    "Content-Type",
+    "mcp-session-id",
+    "Authorization",
+    "X-Harness-Token",
+    "X-Harness-Cookie",
+    "X-Harness-Api-Key",
+    "X-Harness-Account",
+    "X-Harness-Base-Url",
+    "X-Harness-Default-Org",
+    "X-Harness-Default-Project",
+  ].join(", ");
   app.use((_req, res, next) => {
     res.setHeader("Access-Control-Allow-Origin", `http://${host}:${port}`);
     res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type, mcp-session-id");
+    res.setHeader("Access-Control-Allow-Headers", allowedRequestHeaders);
     res.setHeader("Access-Control-Expose-Headers", "mcp-session-id");
     next();
   });
@@ -230,15 +334,49 @@ async function startHttp(config: Config, port: number): Promise<void> {
     // No session header — must be an initialize request. Create a new session.
     let server: McpServer | undefined;
     let transport: StreamableHTTPServerTransport | undefined;
+    let sessionConfig: Config | undefined;
     const initHttpStart = performance.now();
     const initRpcMethod = mcpJsonRpcMethodFromBody(req.body);
     try {
-      server = createHarnessServer(config);
+      // Resolve per-session credentials from headers, falling back to env defaults.
+      const overrides = parseSessionAuthHeaders(req.headers as HeaderBag);
+      try {
+        sessionConfig = buildSessionConfig(globalConfig, overrides);
+      } catch (authErr) {
+        if (authErr instanceof SessionAuthError) {
+          log.warn("Session auth rejected", { missing: authErr.missing });
+          if (!res.headersSent) {
+            res.status(401).json({
+              jsonrpc: "2.0",
+              error: {
+                code: -32001,
+                message: authErr.message,
+                data: { missing: authErr.missing },
+              },
+              id: null,
+            });
+          }
+          return;
+        }
+        throw authErr;
+      }
+
+      const sessionConfigSnapshot = sessionConfig;
+      server = createHarnessServer(sessionConfigSnapshot);
       transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: () => randomUUID(),
         onsessioninitialized: (id) => {
           sessions.set(id, { server: server!, transport: transport!, lastActivity: Date.now() });
-          log.info("Session created", { sessionId: id, total: sessions.size });
+          log.info("Session created", {
+            sessionId: id,
+            total: sessions.size,
+            accountId: sessionConfigSnapshot.HARNESS_ACCOUNT_ID,
+            baseUrl: sessionConfigSnapshot.HARNESS_BASE_URL,
+            tokenPresent: Boolean(sessionConfigSnapshot.HARNESS_BEARER_TOKEN),
+            tokenTail: maskToken(sessionConfigSnapshot.HARNESS_BEARER_TOKEN),
+            cookiePresent: Boolean(sessionConfigSnapshot.HARNESS_COOKIE),
+            apiKeyPresent: Boolean(sessionConfigSnapshot.HARNESS_API_KEY),
+          });
         },
       });
 
@@ -429,24 +567,25 @@ async function main(): Promise<void> {
     process.exit(1);
   });
 
-  const config = loadConfig();
-  setLogLevel(config.LOG_LEVEL);
+  const globalConfig = loadGlobalConfig();
+  setLogLevel(globalConfig.LOG_LEVEL);
 
   const { transport, port } = parseArgs();
 
   log.info("Starting harness-ccm-finops-agent", {
     transport,
-    baseUrl: config.HARNESS_BASE_URL,
-    accountId: config.HARNESS_ACCOUNT_ID,
-    defaultOrg: config.HARNESS_DEFAULT_ORG_ID,
-    defaultProject: config.HARNESS_DEFAULT_PROJECT_ID ?? "(none)",
-    toolsets: config.HARNESS_TOOLSETS ?? "(all)",
+    defaultBaseUrl: globalConfig.HARNESS_BASE_URL,
+    defaultAccountId: globalConfig.HARNESS_ACCOUNT_ID ?? "(none — must be supplied via X-Harness-Account header)",
+    defaultOrg: globalConfig.HARNESS_DEFAULT_ORG_ID,
+    defaultProject: globalConfig.HARNESS_DEFAULT_PROJECT_ID ?? "(none)",
+    toolsets: globalConfig.HARNESS_TOOLSETS ?? "(all)",
+    authMode: transport === "http" ? "header (with .env fallback)" : "env",
   });
 
   if (transport === "stdio") {
-    await startStdio(config);
+    await startStdio(globalConfig);
   } else {
-    await startHttp(config, port);
+    await startHttp(globalConfig, port);
   }
 }
 

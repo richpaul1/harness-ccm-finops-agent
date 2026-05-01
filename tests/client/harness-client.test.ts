@@ -151,6 +151,108 @@ describe("HarnessClient", () => {
     });
   });
 
+  describe("auth selection — non-CCM fallback chain", () => {
+    function authConfig(overrides: Partial<Config>): Config {
+      // Drop the default API key so the fallback chain can be exercised.
+      return makeConfig({ HARNESS_API_KEY: undefined, ...overrides });
+    }
+
+    it("uses x-api-key when an API key is set (CCM path)", async () => {
+      fetchSpy.mockResolvedValue(new Response(JSON.stringify({}), { status: 200 }));
+      const client = new HarnessClient(makeConfig());
+
+      await client.request({ path: "/ccm/api/perspective/getAllPerspectives" });
+
+      const headers = fetchSpy.mock.calls[0][1]?.headers as Record<string, string>;
+      expect(headers["x-api-key"]).toBe("pat.test-account.token.secret");
+      expect(headers["Authorization"]).toBeUndefined();
+      expect(headers["Cookie"]).toBeUndefined();
+    });
+
+    it("CCM path with cookie uses Cookie header (preferred over bearer)", async () => {
+      fetchSpy.mockResolvedValue(new Response(JSON.stringify({}), { status: 200 }));
+      const client = new HarnessClient(
+        authConfig({ HARNESS_COOKIE: "token=abc; routingId=xyz", HARNESS_BEARER_TOKEN: "jwt-value" }),
+      );
+
+      await client.request({ path: "/ccm/api/perspective/getAllPerspectives" });
+
+      const headers = fetchSpy.mock.calls[0][1]?.headers as Record<string, string>;
+      expect(headers["Cookie"]).toBe("token=abc; routingId=xyz");
+      expect(headers["Authorization"]).toBeUndefined();
+      expect(headers["x-api-key"]).toBeUndefined();
+    });
+
+    it("CCM path with only bearer uses Authorization header", async () => {
+      fetchSpy.mockResolvedValue(new Response(JSON.stringify({}), { status: 200 }));
+      const client = new HarnessClient(authConfig({ HARNESS_BEARER_TOKEN: "jwt-value" }));
+
+      await client.request({ path: "/ccm/api/perspective/getAllPerspectives" });
+
+      const headers = fetchSpy.mock.calls[0][1]?.headers as Record<string, string>;
+      expect(headers["Authorization"]).toBe("Bearer jwt-value");
+      expect(headers["Cookie"]).toBeUndefined();
+      expect(headers["x-api-key"]).toBeUndefined();
+    });
+
+    it("non-CCM path with no API key falls back to bearer token (whoami path)", async () => {
+      fetchSpy.mockResolvedValue(new Response(JSON.stringify({}), { status: 200 }));
+      const client = new HarnessClient(authConfig({ HARNESS_BEARER_TOKEN: "jwt-value" }));
+
+      await client.request({ path: "/ng/api/accounts/test-account" });
+
+      const headers = fetchSpy.mock.calls[0][1]?.headers as Record<string, string>;
+      expect(headers["Authorization"]).toBe("Bearer jwt-value");
+      expect(headers["x-api-key"]).toBeUndefined();
+    });
+
+    it("non-CCM path with no API key and no bearer falls back to cookie", async () => {
+      fetchSpy.mockResolvedValue(new Response(JSON.stringify({}), { status: 200 }));
+      const client = new HarnessClient(authConfig({ HARNESS_COOKIE: "token=abc" }));
+
+      await client.request({ path: "/ng/api/accounts/test-account" });
+
+      const headers = fetchSpy.mock.calls[0][1]?.headers as Record<string, string>;
+      expect(headers["Cookie"]).toBe("token=abc");
+      expect(headers["Authorization"]).toBeUndefined();
+      expect(headers["x-api-key"]).toBeUndefined();
+    });
+
+    it("non-CCM path prefers x-api-key over bearer when both are set", async () => {
+      fetchSpy.mockResolvedValue(new Response(JSON.stringify({}), { status: 200 }));
+      const client = new HarnessClient(
+        makeConfig({ HARNESS_BEARER_TOKEN: "jwt-value" }),
+      );
+
+      await client.request({ path: "/ng/api/accounts/test-account" });
+
+      const headers = fetchSpy.mock.calls[0][1]?.headers as Record<string, string>;
+      expect(headers["x-api-key"]).toBe("pat.test-account.token.secret");
+      expect(headers["Authorization"]).toBeUndefined();
+    });
+  });
+
+  describe("authMethod accessor", () => {
+    it("reports cookie when cookie is set (regardless of other auth)", () => {
+      const client = new HarnessClient(
+        makeConfig({ HARNESS_COOKIE: "c", HARNESS_BEARER_TOKEN: "b" }),
+      );
+      expect(client.authMethod).toBe("cookie");
+    });
+
+    it("reports bearer when only a bearer token is set", () => {
+      const client = new HarnessClient(
+        makeConfig({ HARNESS_API_KEY: undefined, HARNESS_BEARER_TOKEN: "b" }),
+      );
+      expect(client.authMethod).toBe("bearer");
+    });
+
+    it("reports apiKey when only an API key is set", () => {
+      const client = new HarnessClient(makeConfig());
+      expect(client.authMethod).toBe("apiKey");
+    });
+  });
+
   describe("request — success", () => {
     it("returns parsed JSON on 200", async () => {
       fetchSpy.mockResolvedValue(new Response(JSON.stringify({ data: { id: "p1" } }), { status: 200 }));
