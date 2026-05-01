@@ -5,6 +5,29 @@ MCP server: **`http://localhost:3000/mcp`**
 Tool prefix: **`harness_ccm_finops_`**
 ---
 
+## 0. Identity — "what account am I connected to?"
+
+When the user asks **"what account am I connected to?"**, **"who am I?"**, **"which Harness tenant is this?"**, or any similar identity question — call `harness_ccm_finops_whoami` (no parameters). It returns:
+
+```json
+{
+  "summary": "Connected to TransUnion (HgTKqISVTX-kQSVsWCHEcA) on https://app3.harness.io/gateway",
+  "companyName": "TransUnion",
+  "accountName": "TransUnion",
+  "accountId": "HgTKqISVTX-kQSVsWCHEcA",
+  "accountType": "PAID",
+  "cluster": "prod-3",
+  "baseUrl": "https://app3.harness.io/gateway",
+  "authMethod": "bearer"
+}
+```
+
+- **Always quote `companyName`** when answering ("You're connected to TransUnion."). Fall back to `accountName` then `accountId` if `companyName` is empty.
+- The `summary` field is a ready-to-use one-liner.
+- Never guess the account from URLs, env vars, or session IDs — always call this tool.
+
+---
+
 ## 1. Bootstrap — discover what's available
 
 **Start every session** by calling `harness_ccm_finops_list` (or `harness_ccm_finops_get`) with `resource_type: "cost_metadata"` (no filters needed):

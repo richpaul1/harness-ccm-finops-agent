@@ -95,7 +95,8 @@ npx playwright install chromium
 |----------|----------|---------|-------------|
 | `HARNESS_API_KEY` | No* | — | Harness personal access token or service account token (`pat.<accountId>.<tokenId>.<secret>`). Required for non-CCM APIs. |
 | `HARNESS_BEARER_TOKEN` | No* | — | Browser session JWT for CCM `/ccm/*` endpoints. Alternative to PAT for CCM-only access. |
-| `HARNESS_ACCOUNT_ID` | Yes | *(from PAT)* | Account identifier. Auto-extracted from PAT tokens; required when using a bearer token. |
+| `HARNESS_COOKIE` | No* | — | Full browser session cookie string. Takes precedence over the bearer on CCM/LW paths. |
+| `HARNESS_ACCOUNT_ID` | Yes* | *(from PAT)* | Account identifier. Auto-extracted from PAT tokens; required otherwise. |
 | `HARNESS_BASE_URL` | No | `https://app.harness.io` | Override for self-managed Harness. |
 | `PORT` | No | `3000` | HTTP transport port. |
 | `HARNESS_DEFAULT_ORG_ID` | No | `default` | Default org identifier. |
@@ -104,13 +105,13 @@ npx playwright install chromium
 | `LOG_LEVEL` | No | `info` | `debug` \| `info` \| `warn` \| `error`. All logs go to stderr only. |
 | `HARNESS_LOG_REQUEST_FILE` | No | — | If set, logs every outbound HTTP request to this file path (useful for debugging). |
 
-\* At least one of `HARNESS_API_KEY` or `HARNESS_BEARER_TOKEN` must be provided.
+\* At least one auth method (`HARNESS_API_KEY`, `HARNESS_BEARER_TOKEN`, or `HARNESS_COOKIE`) plus a resolvable `HARNESS_ACCOUNT_ID` must be available **per session**. In stdio mode they must be in `.env`. In HTTP mode they may come from request headers (see [Multi-tenant HTTP mode](#multi-tenant-http-mode--per-user-credentials-via-headers) below) and `.env` acts as a fallback.
 
 ---
 
 ## Client Configuration
 
-### Cursor (`.cursor/mcp.json`) — HTTP mode
+### Cursor (`.cursor/mcp.json`) — HTTP mode (single-user, .env auth)
 
 ```json
 {
@@ -122,7 +123,52 @@ npx playwright install chromium
 }
 ```
 
-Start the server first with `npm start:http`, then connect Cursor.
+Start the server first with `npm start:http`, then connect Cursor. Auth comes from the `.env` file loaded at startup.
+
+
+### Multi-tenant HTTP mode — per-user credentials via headers
+
+A single MCP HTTP server can serve **multiple users** by having each MCP client send its own Harness credentials as request headers. The server resolves credentials in this order: **request header → `.env` fallback default**. Every header is optional; missing fields fall through to the env value.
+
+```json
+{
+  "mcpServers": {
+    "user-finops": {
+      "url": "http://localhost:3000/mcp",
+      "headers": {
+        "X-Harness-Token": "<session JWT or PAT>",
+        "X-Harness-Cookie": "<full browser session cookie string>",
+        "X-Harness-Account": "<accountId>",
+        "X-Harness-Base-Url": "https://app3.harness.io/gateway",
+        "X-Harness-Default-Org": "default",
+        "X-Harness-Default-Project": ""
+      }
+    }
+  }
+}
+```
+
+Supported headers (case-insensitive):
+
+| Header | Maps to | Notes |
+|---|---|---|
+| `X-Harness-Token` | `HARNESS_BEARER_TOKEN` | Browser/session JWT for CCM. |
+| `Authorization: Bearer <jwt>` | `HARNESS_BEARER_TOKEN` | Standard alternative to `X-Harness-Token`. |
+| `X-Harness-Cookie` | `HARNESS_COOKIE` | Full `Cookie:` string from DevTools. Takes precedence over the bearer on CCM/LW paths. |
+| `X-Harness-Api-Key` | `HARNESS_API_KEY` | PAT / service account token (`pat.<accountId>.<tokenId>.<secret>`). |
+| `X-Harness-Account` | `HARNESS_ACCOUNT_ID` | Required unless an `X-Harness-Api-Key` PAT is supplied (account is then extracted from it). |
+| `X-Harness-Base-Url` | `HARNESS_BASE_URL` | E.g. `https://app3.harness.io/gateway`. |
+| `X-Harness-Default-Org` | `HARNESS_DEFAULT_ORG_ID` | Default org for project-scoped resources. |
+| `X-Harness-Default-Project` | `HARNESS_DEFAULT_PROJECT_ID` | Default project. |
+
+**Behavior**
+
+- Headers are read once per session, when the client sends `initialize` (no `mcp-session-id` header). The server creates a per-session `HarnessClient` bound to those credentials, isolated from other sessions.
+- Subsequent calls on the same `mcp-session-id` reuse that client. To change credentials (e.g. token rotation), close the session (DELETE `/mcp`) and re-initialize.
+- If the merged result lacks an auth method (`X-Harness-Token` / `X-Harness-Cookie` / `X-Harness-Api-Key`) **and** the env file has none either, the server replies with HTTP 401 and a JSON-RPC error listing which fields are missing — no session is created.
+- Credential header values are never logged. The session-creation log records only presence flags and the last 4 chars of the bearer token.
+
+**TLS requirement for production**: per-session JWTs and cookies travel in plaintext HTTP headers. For any deployment beyond localhost, terminate TLS in front of the MCP server (reverse proxy, load balancer, or run the server with HTTPS).
 
 
 ### HTTP health check and manual session
@@ -131,10 +177,19 @@ Start the server first with `npm start:http`, then connect Cursor.
 # Health check
 curl http://localhost:3000/health
 
-# Initialize an MCP session
+# Initialize an MCP session (single-user, .env auth)
 curl -i -X POST http://localhost:3000/mcp \
   -H "Content-Type: application/json" \
   -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1"}}}'
+
+# Initialize an MCP session (multi-user, header auth)
+curl -i -X POST http://localhost:3000/mcp \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -H "X-Harness-Token: $HARNESS_BEARER_TOKEN" \
+  -H "X-Harness-Account: $HARNESS_ACCOUNT_ID" \
+  -H "X-Harness-Base-Url: https://app3.harness.io/gateway" \
   -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1"}}}'
 ```
 

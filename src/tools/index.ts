@@ -18,6 +18,7 @@ import { registerCcmVideoRenderTool } from "./harness-ccm-video-render.js";
 import { registerCcmPptxRenderTool } from "./harness-ccm-pptx-render.js";
 import { registerCcmGuideTool } from "./harness-ccm-guide.js";
 import { registerCcmFinOpsCurriculumTool } from "./harness-ccm-finops-curriculum.js";
+import { registerCcmWhoamiTool } from "./harness-ccm-whoami.js";
 
 export function registerAllTools(server: McpServer, registry: Registry, client: HarnessClient, config: Config): void {
   registerListTool(server, registry, client);
@@ -35,4 +36,5 @@ export function registerAllTools(server: McpServer, registry: Registry, client: 
   registerCcmPptxRenderTool(server, config);
   registerCcmGuideTool(server);
   registerCcmFinOpsCurriculumTool(server);
+  registerCcmWhoamiTool(server, client, config);
 }
