@@ -143,15 +143,16 @@ export function renderShell({
   const pagedjsBoot = isPrint
     ? `<script src="/_report/vendor/paged.polyfill.js"></script>
        <script>
-         class ColesHandler extends Paged.Handler {
+         class AcmeHandler extends Paged.Handler {
            constructor(chunker, polisher, caller) { super(chunker, polisher, caller); }
            afterRendered() { window.__PAGED_READY__ = true; }
          }
-         Paged.registerHandlers(ColesHandler);
+         Paged.registerHandlers(AcmeHandler);
        </script>`
     : `<script type="module" src="${themeBase}/app.js"></script>
        <script type="module" src="/_report/public/theme-switch.js"></script>
-       <script type="module" src="/_report/public/export-menu.js"></script>`;
+       <script type="module" src="/_report/public/export-menu.js"></script>
+       <script type="module" src="/_report/public/edit-panel.js"></script>`;
 
   return `<!doctype html>
 <html lang="en" data-mode="${mode}" data-theme="${theme.id}">
@@ -165,7 +166,8 @@ export function renderShell({
   <link rel="stylesheet" href="${themeBase}/theme.css" />
   ${isPrint
     ? `<link rel="stylesheet" href="${themeBase}/print.css" />`
-    : `<link rel="stylesheet" href="${themeBase}/web.css" />`}
+    : `<link rel="stylesheet" href="${themeBase}/web.css" />
+       <link rel="stylesheet" href="/_report/public/edit-panel.css" />`}
 </head>
 <body class="mode-${mode} theme-${theme.id}">
   ${appShellStart}

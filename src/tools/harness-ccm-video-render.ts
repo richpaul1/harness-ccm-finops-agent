@@ -112,7 +112,7 @@ export function registerCcmVideoRenderTool(server: McpServer, config: Config): v
           .describe(
             "Theme to render the slides in. Default `harness`. The video frames the print-view " +
               "of the chosen theme exactly as the PDF export does. Built-in: harness, modern, " +
-              "glass, kinetic. Customer packs may add more (e.g. 'coles').",
+              "glass, kinetic. Customer packs may add more (e.g. 'acme').",
           )
           .optional(),
         voice: z

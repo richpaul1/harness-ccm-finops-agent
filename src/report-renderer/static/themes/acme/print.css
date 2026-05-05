@@ -1,5 +1,5 @@
 /* =============================================================
-   COLES PRINT / PDF VIEW — Paged Media via paged.polyfill.js
+   ACME PRINT / PDF VIEW — Paged Media via paged.polyfill.js
    ============================================================= */
 
 @page {
@@ -128,7 +128,7 @@
 /* Set running strings from body data attributes */
 body::before {
   content: "";
-  string-set: doc-footer-left "Coles Group · Confidential";
+  string-set: doc-footer-left "Acme Corp · Confidential";
   display: none;
 }
 body[data-doc-footer-left]::before {

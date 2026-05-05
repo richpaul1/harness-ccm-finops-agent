@@ -1,5 +1,5 @@
 /**
- * Coles theme — browser-side behaviour.
+ * Acme theme — browser-side behaviour.
  * Scroll-spy for the TOC, active-link highlighting.
  */
 

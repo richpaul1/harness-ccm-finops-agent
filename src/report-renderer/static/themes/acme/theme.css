@@ -1,16 +1,19 @@
 /* =============================================================
-   COLES GROUP REPORT THEME — shared base
-   Brand palette: Coles red #E01A22, charcoal #1A1A1A, white.
+   ACME CORP REPORT THEME — shared base
+   Reference example for building a customer-branded theme.
+   Brand palette: deep teal #0F766E, charcoal #1A1A1A, white.
    Paired with print.css (paged media) or web.css (sidebar app).
    ============================================================= */
 
 :root {
-  /* Coles brand palette */
-  --c-red:        #E01A22;
-  --c-red-dark:   #B01218;
-  --c-red-light:  #F25059;
-  --c-red-50:     #FFF0F0;
-  --c-red-100:    #FFD6D7;
+  /* Acme brand palette (referenced as --c-red etc. throughout this file
+     for backwards-compatibility with custom blocks; rename in your fork
+     if you prefer semantic names like --acme-primary). */
+  --c-red:        #0F766E;
+  --c-red-dark:   #115E59;
+  --c-red-light:  #14B8A6;
+  --c-red-50:     #F0FDFA;
+  --c-red-100:    #CCFBF1;
 
   --c-ink:        #1A1A1A;
   --c-body:       #2D2D2D;
@@ -552,7 +555,7 @@ body {
 }
 
 /* =============================================================
-   Portfolio bucket grid  (Coles-specific custom block)
+   Portfolio bucket grid  (Acme pack custom block)
    ============================================================= */
 .portfolio-bucket-grid {
   display: grid;
@@ -611,7 +614,7 @@ body {
 }
 
 /* =============================================================
-   Portfolio detail block  (Coles-specific custom block)
+   Portfolio detail block  (Acme pack custom block)
    ============================================================= */
 .portfolio-detail {
   margin: 0 0 48px;

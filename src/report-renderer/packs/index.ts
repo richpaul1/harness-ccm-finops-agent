@@ -39,6 +39,17 @@ const DEFAULT_PACKS_ROOT = path.resolve(HERE, "..", "..", "..", "report-packs");
 
 // ─── Pack manifest ────────────────────────────────────────────────────────────
 
+export interface PackTemplate {
+  /** Stable identifier (used in tooling / URLs). */
+  id: string;
+  /** Human-readable name (e.g. "Monthly Portfolio Cost Optimisation Report"). */
+  name: string;
+  /** One-paragraph description of what the template produces. */
+  description?: string;
+  /** Relative path inside the pack (e.g. "templates/portfolio-monthly.md"). */
+  path: string;
+}
+
 export interface PackManifest {
   /** Unique identifier for this pack (matches the directory name). */
   id: string;
@@ -59,6 +70,11 @@ export interface PackManifest {
    * source, compile it first or author plain `.js` blocks.
    */
   block_preprocessors?: string[];
+  /**
+   * Markdown templates this pack ships, surfaced through the
+   * `harness_ccm_finops_packs` discovery tool so agents know what's available.
+   */
+  templates?: PackTemplate[];
 }
 
 export interface RegisteredPack extends PackManifest {
@@ -66,6 +82,10 @@ export interface RegisteredPack extends PackManifest {
   packDir: string;
   /** Absolute path to the pack's `theme/` directory, or null if absent. */
   themeDir: string | null;
+  /** Absolute path to the pack's `playbook.md`, or null if absent. */
+  playbookPath: string | null;
+  /** Absolute path to the pack's `README.md`, or null if absent. */
+  readmePath: string | null;
 }
 
 // ─── Discovered packs (keyed by id) ─────────────────────────────────────────
@@ -95,11 +115,23 @@ function discoverPacksFrom(rootDir: string): void {
     const themeSubDir = path.join(packDir, "theme");
     const themeManifestPath = path.join(themeSubDir, "manifest.json");
     const themeDir = fs.existsSync(themeManifestPath) ? themeSubDir : null;
-    const pack: RegisteredPack = { ...manifest, packDir, themeDir };
+    const playbookCandidate = path.join(packDir, "playbook.md");
+    const readmeCandidate = path.join(packDir, "README.md");
+    const playbookPath = fs.existsSync(playbookCandidate) ? playbookCandidate : null;
+    const readmePath = fs.existsSync(readmeCandidate) ? readmeCandidate : null;
+    const pack: RegisteredPack = {
+      ...manifest,
+      packDir,
+      themeDir,
+      playbookPath,
+      readmePath,
+    };
     _packs.set(manifest.id, pack);
     log.info(`Registered pack '${manifest.id}' from ${packDir}`, {
       theme: themeDir ?? "none",
       preprocessors: manifest.block_preprocessors?.length ?? 0,
+      templates: manifest.templates?.length ?? 0,
+      playbook: playbookPath ? "yes" : "no",
     });
   }
 }
@@ -107,17 +139,27 @@ function discoverPacksFrom(rootDir: string): void {
 function ensureInitialised(): void {
   if (_initialised) return;
   _initialised = true;
+  for (const root of getPackRoots()) {
+    discoverPacksFrom(root);
+  }
+}
 
-  // Extra pack roots (external / CI-injected)
+/**
+ * The full ordered list of pack roots that get scanned, deduplicated. First
+ * match wins on `id` collision so external roots can shadow built-ins.
+ * Exposed for the discovery tool so clients know where to drop new packs.
+ */
+export function getPackRoots(): string[] {
+  const roots: string[] = [];
   const extra = process.env.HARNESS_REPORT_PACKS_DIR_EXTRA;
   if (extra) {
     for (const entry of extra.split(":")) {
       const trimmed = entry.trim();
-      if (trimmed) discoverPacksFrom(path.resolve(trimmed));
+      if (trimmed) roots.push(path.resolve(trimmed));
     }
   }
-  // In-repo packs (committed)
-  discoverPacksFrom(DEFAULT_PACKS_ROOT);
+  roots.push(DEFAULT_PACKS_ROOT);
+  return Array.from(new Set(roots));
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────

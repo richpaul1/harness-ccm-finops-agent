@@ -19,6 +19,7 @@ import { registerCcmPptxRenderTool } from "./harness-ccm-pptx-render.js";
 import { registerCcmGuideTool } from "./harness-ccm-guide.js";
 import { registerCcmFinOpsCurriculumTool } from "./harness-ccm-finops-curriculum.js";
 import { registerCcmWhoamiTool } from "./harness-ccm-whoami.js";
+import { registerCcmPacksTool } from "./harness-ccm-packs.js";
 
 export function registerAllTools(server: McpServer, registry: Registry, client: HarnessClient, config: Config): void {
   registerListTool(server, registry, client);
@@ -32,9 +33,17 @@ export function registerAllTools(server: McpServer, registry: Registry, client: 
   registerMarkdownToDocxTool(server);
   registerCcmMaturityChartTool(server, config);
   registerCcmReportRenderTool(server, config);
-  registerCcmVideoRenderTool(server, config);
+  // Voice/narrated-video tool is gated behind HARNESS_VOICE_ENABLED so that
+  // (a) the agent doesn't see it as an option when voice isn't configured,
+  // and (b) the agent isn't tempted to author <!-- voice: ... --> tags into
+  // markdown reports that will never get narrated. Set HARNESS_VOICE_ENABLED=true
+  // in .env (plus a TTS provider env var) to expose this tool.
+  if (config.HARNESS_VOICE_ENABLED) {
+    registerCcmVideoRenderTool(server, config);
+  }
   registerCcmPptxRenderTool(server, config);
   registerCcmGuideTool(server);
   registerCcmFinOpsCurriculumTool(server);
   registerCcmWhoamiTool(server, client, config);
+  registerCcmPacksTool(server);
 }

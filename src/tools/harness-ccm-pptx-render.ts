@@ -72,7 +72,7 @@ export function registerCcmPptxRenderTool(server: McpServer, config: Config): vo
           .describe(
             "Theme to render the slides in. Default `harness`. The deck frames the print-view " +
               "of the chosen theme exactly as the PDF export does. Built-in: harness, modern, " +
-              "glass, kinetic. Customer packs may add more (e.g. 'coles').",
+              "glass, kinetic. Customer packs may add more (e.g. 'acme').",
           )
           .optional(),
         slide_size: z

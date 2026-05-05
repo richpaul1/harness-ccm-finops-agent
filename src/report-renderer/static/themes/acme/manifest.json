@@ -1,0 +1,11 @@
+{
+  "id": "acme",
+  "name": "Acme Corp",
+  "description": "Acme Corp branded theme: deep teal, charcoal, white. Reference example for building a customer-branded theme on top of the report renderer.",
+  "brand": {
+    "wordmark": "Acme Corp",
+    "sub": "Cloud Cost Optimisation"
+  },
+  "fonts": "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap",
+  "pageSize": "A4"
+}

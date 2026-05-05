@@ -1,0 +1,17 @@
+{
+  "id": "acme",
+  "name": "Acme Corp",
+  "theme_id": "acme",
+  "block_preprocessors": [
+    "blocks/portfolio-bucket-grid.js",
+    "blocks/portfolio-detail.js"
+  ],
+  "templates": [
+    {
+      "id": "portfolio-monthly",
+      "name": "Monthly Portfolio Cost Optimisation Report",
+      "description": "Reference template. Page 1: Portfolio bucket summary grid. Page 2+: Per-portfolio financial detail with cost-centre breakdown table.",
+      "path": "templates/portfolio-monthly.md"
+    }
+  ]
+}

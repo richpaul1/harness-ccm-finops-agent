@@ -11,7 +11,8 @@
     "build/"
   ],
   "scripts": {
-    "build": "tsc && npm run build:copy-assets",
+    "build": "npm run build:codemirror && tsc && npm run build:copy-assets",
+    "build:codemirror": "esbuild src/report-renderer/static/public/codemirror-entry.mjs --bundle --minify --format=esm --target=es2020 --outfile=src/report-renderer/static/public/codemirror.bundle.js --legal-comments=none",
     "build:copy-assets": "node -e \"const fs=require('fs'),path=require('path');fs.cpSync('src/report-renderer/static','build/report-renderer/static',{recursive:true});console.log('Copied report-renderer static assets');fs.mkdirSync('build/docs',{recursive:true});fs.copyFileSync('src/docs/finops-guide.md','build/docs/finops-guide.md');console.log('Copied finops-guide.md');fs.copyFileSync('src/docs/finops-lessons.md','build/docs/finops-lessons.md');console.log('Copied finops-lessons.md');\"",
     "dev": "npm run build && concurrently \"npm:dev:watch\" \"npm:dev:serve\"",
     "dev:watch": "tsc --watch",
@@ -71,13 +72,23 @@
     "zod": "^4.0.0"
   },
   "devDependencies": {
+    "@codemirror/autocomplete": "^6.20.1",
+    "@codemirror/commands": "^6.10.3",
+    "@codemirror/lang-markdown": "^6.5.0",
+    "@codemirror/language": "^6.12.3",
+    "@codemirror/search": "^6.7.0",
+    "@codemirror/state": "^6.6.0",
+    "@codemirror/view": "^6.41.1",
+    "@lezer/highlight": "^1.2.3",
     "@types/express": "^5.0.6",
     "@types/fluent-ffmpeg": "^2.1.28",
     "@types/markdown-it": "^14.1.2",
     "@types/node": "^22.13.5",
     "@types/pdfkit": "^0.13.9",
     "concurrently": "^9.1.2",
+    "esbuild": "^0.28.0",
     "nodemon": "^3.1.9",
+    "turndown": "^7.2.4",
     "typescript": "^5.7.3",
     "vitest": "^3.0.6"
   },

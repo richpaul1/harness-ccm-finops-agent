@@ -60,6 +60,16 @@ const GlobalConfigSchema = z
      * (default 3000) at `http://localhost:<PORT>/reports/<id>/`.
      */
     HARNESS_REPORT_PORT: z.coerce.number().min(1).max(65535).default(4321),
+    /**
+     * Voice / narrated-video feature flag. When false (default) the
+     * `harness_ccm_finops_video_render` MCP tool is NOT registered, the
+     * Acme reference template ships without a `<!-- voice: ... -->` tag,
+     * and the agent has no surface telling it to author voice narration.
+     * Set to `true` only when at least one TTS provider env var is also set
+     * (LOCAL_TTS_BASE_URL, OPENAI_API_KEY, ELEVENLABS_API_KEY,
+     * AZURE_SPEECH_KEY+AZURE_SPEECH_REGION, or GOOGLE_TTS_API_KEY).
+     */
+    HARNESS_VOICE_ENABLED: z.coerce.boolean().default(false),
   })
   .transform((data) => ({
     ...data,
@@ -204,5 +214,6 @@ export function buildSessionConfig(
     HARNESS_CCM_CHART_MAX_HEIGHT: global.HARNESS_CCM_CHART_MAX_HEIGHT,
     HARNESS_CCM_CHART_MAX_POINTS: global.HARNESS_CCM_CHART_MAX_POINTS,
     HARNESS_REPORT_PORT: global.HARNESS_REPORT_PORT,
+    HARNESS_VOICE_ENABLED: global.HARNESS_VOICE_ENABLED,
   };
 }

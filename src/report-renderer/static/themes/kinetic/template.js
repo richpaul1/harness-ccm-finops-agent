@@ -183,7 +183,8 @@ export function renderShell({
        </script>`
     : `<script type="module" src="${themeBase}/app.js"></script>
        <script type="module" src="/_report/public/theme-switch.js"></script>
-       <script type="module" src="/_report/public/export-menu.js"></script>`;
+       <script type="module" src="/_report/public/export-menu.js"></script>
+       <script type="module" src="/_report/public/edit-panel.js"></script>`;
 
   return `<!doctype html>
 <html lang="en" data-mode="${mode}" data-theme="${theme.id}">
@@ -197,7 +198,8 @@ export function renderShell({
   <link rel="stylesheet" href="${themeBase}/theme.css" />
   ${isPrint
     ? `<link rel="stylesheet" href="${themeBase}/print.css" />`
-    : `<link rel="stylesheet" href="${themeBase}/web.css" />`}
+    : `<link rel="stylesheet" href="${themeBase}/web.css" />
+       <link rel="stylesheet" href="/_report/public/edit-panel.css" />`}
 </head>
 <body class="mode-${mode} theme-${theme.id}">
   ${appShellStart}

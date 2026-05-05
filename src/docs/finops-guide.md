@@ -1276,6 +1276,61 @@ The renderer runs in-process inside the MCP server — no separate install or se
 - **HTTP mode**: reports share the MCP `PORT` (default `3000`). No extra config needed.
 - **Stdio mode**: lazy-starts an embedded listener on `HARNESS_REPORT_PORT` (default `4321`).
 
+### Voice / narrated-video features are opt-in
+
+The `harness_ccm_finops_video_render` MCP tool — which turns the report into a
+narrated MP4 by reading `<!-- voice: ... -->` comments in the markdown — is
+gated behind the `HARNESS_VOICE_ENABLED` env flag (default `false`).
+
+**When the flag is off (default):**
+
+- The video tool is **not** registered with the MCP server, so the agent does
+  not see it in `tools/list` and cannot call it.
+- The shipped Acme report template does **not** include a `<!-- voice: ... -->`
+  tag.
+- **The agent must NOT author voice comments into reports.** If the user has
+  not enabled voice, generating voice tags creates dead weight in the markdown
+  — they're invisible in the rendered HTML/PDF but become noise in the source.
+
+**When the flag is on:**
+
+- The video tool registers and is callable.
+- Voice tags are a supported authoring convention. The agent may add one
+  `<!-- voice: ... -->` per logical page when generating new reports, with the
+  narration text inside.
+- A TTS provider env var (`OPENAI_API_KEY`, `LOCAL_TTS_BASE_URL`, etc.) must
+  also be set, otherwise the video renders silently.
+
+To check whether voice is enabled in the current session, look for the
+`harness_ccm_finops_video_render` tool in the `tools/list` response: present
+means enabled, absent means disabled.
+
+### Live source editing in the browser
+
+Every rendered report ships with a floating **"Edit Source"** button (bottom-right). Clicking
+it opens a slide-in panel with the underlying markdown source. Edits are saved back to the
+original file on disk, and the preview reloads immediately.
+
+| Action | Shortcut |
+|---|---|
+| Open / close the editor | Click the floating button |
+| Save changes | ⌘/Ctrl+S, or the "Save & Reload" button |
+| Cancel without saving | Esc, or the "Cancel" button |
+
+The renderer watches the source file via SSE (`./source-watch`), so external edits — terminal
+vim, your IDE, agent-driven re-renders — also trigger an automatic browser reload **as long as
+the editor panel is closed**. If you have the panel open and the file changes externally, you
+get an in-panel warning so you can decide whether to overwrite.
+
+**Conflict detection.** When you open the editor we record the file's `mtime`. On Save the
+client sends that mtime back; if the file moved underneath you (concurrent external edit), the
+server returns 409 and the panel asks whether to force-overwrite.
+
+**Where it works.** The editor is auto-injected into every web-mode render across all themes
+(harness, modern, glass, kinetic, plus any pack-shipped themes such as `acme`). It is
+automatically suppressed in print mode (`?mode=print`) so it never appears in PDF/PPTX/video
+captures.
+
 ### Limitations
 
 - PDF export requires Playwright + Chromium: `npx playwright install chromium` (one-time setup).
@@ -1283,6 +1338,9 @@ The renderer runs in-process inside the MCP server — no separate install or se
 - The report registry lives in process memory — if the MCP server restarts, already-registered
   reports need to be re-registered. Re-registering by the same `markdown_path` is idempotent and
   produces the same URL.
+- The Live Edit feature writes back to the original markdown file at `markdown_path`. The
+  renderer is localhost-only by design, so there is no auth on `POST /reports/:id/source`. If
+  the renderer is ever exposed beyond localhost, gate this endpoint behind an env flag.
 
 ---
 
@@ -1978,13 +2036,55 @@ recurring report family without touching the core renderer. Each pack lives unde
 `report-packs/<pack-id>/` in the repo (or in an external directory pointed to by
 `HARNESS_REPORT_PACKS_DIR_EXTRA`).
 
+### Discovery — `harness_ccm_finops_packs`
+
+This is the **primary discovery tool** for packs. Use it whenever the user
+mentions a specific customer's report, asks what branded reports are available,
+or asks how to create a new pack.
+
+```
+# List installed packs (no args)
+harness_ccm_finops_packs
+
+# Get a specific pack — returns the playbook content so you can follow it
+harness_ccm_finops_packs  pack_id: "acme"
+
+# Get a pack with full template source baked in (single-shot bootstrap)
+harness_ccm_finops_packs  pack_id: "acme"  include_template_source: true
+```
+
+**List response** includes one entry per pack with `id`, `name`, `theme_id`,
+`templates[]`, `block_count`, `pack_dir`, `has_playbook`. It also includes:
+
+- `discovery_roots` — every directory the registry scanned (so you can see
+  which root the pack was loaded from, useful when debugging customer overlays).
+- `authoring_primer` — the directory layout, block contract, installation steps,
+  and end-to-end usage flow for creating a new pack.
+
+**Get response** includes the full pack metadata + the **playbook markdown**
+(when `include_playbook` is true, the default in get mode). The playbook is the
+agent-readable script for that customer: which CCM queries to run, which
+perspective IDs map to which template field, and which sections to leave for
+human authoring.
+
+### When to call this tool — example user prompts
+
+| User asks | Action |
+|---|---|
+| "Generate the monthly portfolio report for `<customer>`" | `harness_ccm_finops_packs pack_id:"<id>"` → follow the returned playbook |
+| "What customer reports do we have?" | `harness_ccm_finops_packs` (list mode) |
+| "Render the `<customer>` BVR" | List packs, find the one matching `<customer>`, then get it |
+| "How do I create a new customer report pack?" | `harness_ccm_finops_packs` → read `authoring_primer` + Section 20 |
+| "Show me the playbook for `<pack-id>`" | `harness_ccm_finops_packs pack_id:"<id>" include_playbook:true` |
+| "Show me the example report pack" | `harness_ccm_finops_packs pack_id:"acme"` (the `acme` pack is a fictional reference) |
+
 ### Pack anatomy
 
 ```
 report-packs/
   <customer-id>/
     pack.json         # manifest: id, name, theme_id, block_preprocessors, templates
-    theme/            # Coles-branded theme (manifest.json + template.js + *.css + app.js)
+    theme/            # Optional pack-bundled theme (manifest.json + template.js + *.css + app.js)
     blocks/           # Custom ::: block preprocessors (plain .js, ESM)
     templates/        # Markdown skeletons with {{placeholder}} fields
     playbook.md       # Agent-readable instructions: which CCM queries to run, what to fill
@@ -2011,9 +2111,9 @@ themes in without touching the bundled `src/report-renderer/static/themes/` dire
 
 ```json
 {
-  "id": "coles",
-  "name": "Coles Group",
-  "theme_id": "coles",
+  "id": "acme",
+  "name": "Acme Corp",
+  "theme_id": "acme",
   "block_preprocessors": [
     "blocks/portfolio-bucket-grid.js",
     "blocks/portfolio-detail.js"
@@ -2058,27 +2158,33 @@ If you need container-style rendering, write a preprocessor that emits the HTML 
 (Pattern 1) rather than registering a markdown-it plugin — this avoids requiring access to
 the markdown-it instance and keeps the contract to the simple `preprocessMarkdown` export.
 
-### Coles example — what's included
+### Reference example — the `acme` pack
 
-The `report-packs/coles/` pack ships the Coles Group monthly Portfolio Cost Optimisation
-report with two new block types:
+The `report-packs/acme/` pack ships a fictional reference Cloud Cost Optimisation
+monthly report with two new block types. Acme Corp is **not a real customer** — the
+pack exists so CSMs and customers can see a working end-to-end example before
+building their own.
 
 | Block | Purpose |
 |---|---|
 | `::: portfolio_bucket_grid` | Page-1 hero: 5-column SVG bucket grid showing captured vs potential FY savings per portfolio |
 | `::: portfolio_detail <name> \| GM: <name> \| ...` | Per-portfolio detail page: header bar, financial summary, insights narrative, cost-centre breakdown table |
 
-**To generate a Coles report, tell the agent:**
+**To explore the reference report, tell the agent:**
 
-> "Read `report-packs/coles/playbook.md` and generate this month's portfolio report
-> for Coles. Today's period is FY26 YTD to 31 January."
+> "Read the Acme pack's playbook and render an example portfolio report."
 
 The agent will:
-1. Read the playbook.
-2. Run the CCM queries listed in Steps 0–5.
-3. Fill the structured fields in a copy of `templates/portfolio-monthly.md`.
-4. Prompt you for the narrative/human fields (GM names, insight bullets, Apptio figures).
-5. Call `harness_ccm_finops_report_render` with `theme: "coles"`.
+1. Call `harness_ccm_finops_packs pack_id:"acme"` to fetch the playbook.
+2. Either run the CCM queries against your account (if you authorise it) or
+   render the template with its built-in placeholder data.
+3. Call `harness_ccm_finops_report_render` with `theme: "acme"` to produce the URL.
+
+**To create a real customer pack:** clone `report-packs/acme/` to
+`report-packs/<customer-id>/`, rename, rebrand the theme, replace the five reference
+portfolios with the customer's actual portfolios, and update the playbook with their
+specific cost-centre dimension and forecasting tool. See "Adding a new customer pack"
+below.
 
 ### Export formats for pack-specific reports
 
@@ -2092,13 +2198,43 @@ The agent will:
 
 ### Adding a new customer pack
 
-1. Create `report-packs/<new-customer>/pack.json` with your `id`, `theme_id`, and `block_preprocessors`.
-2. Create `report-packs/<new-customer>/theme/manifest.json` (and the 5 other theme files).
-3. Write block preprocessors as plain `.js` ESM modules in `blocks/`.
-4. Create a `templates/` skeleton and a `playbook.md`.
-5. Restart the MCP server — the pack is auto-discovered on next startup.
-6. Render: `harness_ccm_finops_report_render` with `theme: "<new-customer>"`.
+1. Create `report-packs/<new-customer>/pack.json` with your `id`, `theme_id`,
+   `block_preprocessors`, and `templates`. Example:
 
-No code changes to the core renderer are needed.
+   ```json
+   {
+     "id": "<new-customer>",
+     "name": "<Customer Display Name>",
+     "theme_id": "<new-customer>",
+     "block_preprocessors": ["blocks/my-block.js"],
+     "templates": [
+       {
+         "id": "monthly",
+         "name": "Monthly Cost Optimisation Report",
+         "description": "One-pager portfolio summary + per-team detail",
+         "path": "templates/monthly.md"
+       }
+     ]
+   }
+   ```
+
+2. Create the theme: copy `src/report-renderer/static/themes/acme/` to
+   `src/report-renderer/static/themes/<new-customer>/` (or to a `theme/` subdir
+   inside the pack itself for a self-contained delivery), update `manifest.json`
+   (id, name, brand fields) and `theme.css` (search-and-replace `--c-red*`
+   palette tokens with the customer's brand colours).
+3. Write block preprocessors as plain `.js` ESM modules in `blocks/` — each
+   must export `preprocessMarkdown(src: string): string`. The CommonMark gotcha
+   to remember: collapse blank lines from generated HTML or markdown-it will
+   drop out of the HTML block and treat indented children as code blocks.
+4. Create a `templates/<id>.md` skeleton with `{{placeholder}}` fields and a
+   `playbook.md` documenting the CCM queries that fill those fields.
+5. Restart the MCP server — the pack is auto-discovered on next startup.
+6. Verify discovery: `harness_ccm_finops_packs` should now list your pack.
+7. Render: `harness_ccm_finops_report_render` with `theme: "<new-customer>"`.
+
+No code changes to the core renderer are needed. The `harness_ccm_finops_packs`
+tool's response also embeds the same authoring primer in its `authoring_primer`
+field — a good shortcut for agents helping a customer scaffold a new pack.
 
 ---

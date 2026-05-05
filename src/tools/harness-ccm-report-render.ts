@@ -95,7 +95,7 @@ export function registerCcmReportRenderTool(server: McpServer, config: Config): 
             "Initial theme for the preview URL. User can switch themes in the browser after " +
               "loading. Built-in options: harness (navy + amber executive), modern (coral " +
               "editorial), glass (liquid-glass adaptive), kinetic (lime + motion). Customer " +
-              "report packs may add additional theme IDs (e.g. 'coles'). Unknown IDs fall " +
+              "report packs may add additional theme IDs (e.g. 'acme'). Unknown IDs fall " +
               "back to 'harness'.",
           )
           .optional(),

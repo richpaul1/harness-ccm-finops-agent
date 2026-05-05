@@ -1,5 +1,5 @@
 /* =============================================================
-   COLES WEB / BROWSER VIEW
+   ACME WEB / BROWSER VIEW
    Sidebar layout + interactive chrome.
    ============================================================= */
 
@@ -37,7 +37,7 @@
 .sidebar-brand .brand-mark {
   font-weight: 800;
   font-size: 15px;
-  color: #E01A22;
+  color: #0F766E;
   letter-spacing: 0.02em;
 }
 .sidebar-brand .brand-sub {
@@ -72,10 +72,10 @@
   width: 100%;
 }
 .btn-primary {
-  background: #E01A22;
+  background: #0F766E;
   color: #fff;
 }
-.btn-primary:hover { background: #B01218; }
+.btn-primary:hover { background: #115E59; }
 .btn-secondary {
   background: rgba(255,255,255,0.07);
   color: rgba(255,255,255,0.8);
@@ -136,9 +136,9 @@
   background: rgba(255,255,255,0.05);
 }
 .toc-list li a.active {
-  color: #E01A22;
-  border-left-color: #E01A22;
-  background: rgba(224,26,34,0.08);
+  color: #0F766E;
+  border-left-color: #0F766E;
+  background: rgba(15,118,110,0.08);
 }
 .toc-l1 > a { font-weight: 600; }
 .toc-l2 > a { padding-left: 36px; font-size: 12px; }

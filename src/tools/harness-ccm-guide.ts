@@ -21,7 +21,10 @@ export function registerCcmGuideTool(server: McpServer): void {
         "calling conventions, resource types, group_by dimensions, time filter presets, " +
         "spike investigation patterns, anomaly triage, recommendations, budgets, " +
         "commitment orchestration, AutoStopping, maturity charts, report rendering, " +
-        "and the full BVR (Business Value Review) playbook with per-section agent queries.",
+        "the full BVR (Business Value Review) playbook with per-section agent queries, " +
+        "and the Customer Report Pack system (per-customer branded report families with " +
+        "their own theme + custom blocks + agent playbook — see Section 20 and the " +
+        "harness_ccm_finops_packs tool for discovery).",
       inputSchema: {},
       annotations: {
         title: "FinOps Agent Guide",

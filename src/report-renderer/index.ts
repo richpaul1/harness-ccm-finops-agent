@@ -13,7 +13,7 @@ import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import express, { type Express, type Request, type Response } from "express";
 import slugify from "slugify";
-import { renderDocument, warmPackPreprocessors } from "./render.js";
+import { renderDocument, renderMarkdownString, warmPackPreprocessors } from "./render.js";
 import { renderPdf } from "./pdf.js";
 import { renderVideo } from "./video.js";
 import { renderPptx } from "./pptx.js";
@@ -60,6 +60,85 @@ export interface RegisterReportOptions {
 }
 
 const reports = new Map<string, ReportEntry>();
+
+/**
+ * Disk-persisted registry path. The renderer's `reports` map is in-memory by
+ * default, which means every `nodemon` restart wiped the URL → markdown-path
+ * mapping and forced the user to re-register. We mirror the map to a JSON
+ * file on every mutation and restore it at module load so URLs survive
+ * restarts.
+ *
+ * Location: `<cwd>/out/report-registry.json` (under our standard `out/` dir
+ * so it's gitignored alongside generated PDFs/MP4s/PPTXs).
+ */
+const REGISTRY_PERSIST_PATH = path.resolve(process.cwd(), "out", "report-registry.json");
+
+interface PersistedRegistry {
+  version: 1;
+  entries: ReportEntry[];
+}
+
+/**
+ * Write the current `reports` map to disk. Called from `registerReport` and
+ * `deleteReport`. Errors are logged and swallowed — a transient write failure
+ * shouldn't crash the request, the in-memory state remains correct.
+ */
+function persistRegistry(): void {
+  try {
+    fs.mkdirSync(path.dirname(REGISTRY_PERSIST_PATH), { recursive: true });
+    const payload: PersistedRegistry = {
+      version: 1,
+      entries: Array.from(reports.values()),
+    };
+    fs.writeFileSync(REGISTRY_PERSIST_PATH, JSON.stringify(payload, null, 2));
+  } catch (err) {
+    log.warn("Failed to persist report registry", { error: String(err) });
+  }
+}
+
+/**
+ * Restore the persisted registry at module load. Skips entries whose
+ * `contentPath` no longer exists on disk (the markdown was moved or deleted
+ * between server runs). Idempotent — calling multiple times is safe.
+ */
+function loadPersistedRegistry(): void {
+  try {
+    if (!fs.existsSync(REGISTRY_PERSIST_PATH)) return;
+    const raw = fs.readFileSync(REGISTRY_PERSIST_PATH, "utf8");
+    const data = JSON.parse(raw) as Partial<PersistedRegistry>;
+    if (!data || data.version !== 1 || !Array.isArray(data.entries)) {
+      log.warn("Persisted registry has unexpected shape, ignoring");
+      return;
+    }
+    let restored = 0;
+    let pruned = 0;
+    for (const entry of data.entries) {
+      if (!entry || typeof entry.id !== "string" || typeof entry.contentPath !== "string") {
+        continue;
+      }
+      // Prune entries whose markdown file no longer exists — they'd just 404
+      // on the asset serving path anyway.
+      if (!fs.existsSync(entry.contentPath)) {
+        pruned += 1;
+        continue;
+      }
+      reports.set(entry.id, entry);
+      restored += 1;
+    }
+    log.info("Report registry restored from disk", {
+      path: REGISTRY_PERSIST_PATH,
+      restored,
+      pruned,
+    });
+    if (pruned > 0) persistRegistry(); // rewrite without the pruned entries
+  } catch (err) {
+    log.warn("Failed to load persisted report registry", { error: String(err) });
+  }
+}
+
+// Restore on module load so the first request after a server restart finds
+// previously-registered reports. This runs ONCE per process.
+loadPersistedRegistry();
 
 /**
  * Most recent rendered MP4 path per (reportId, themeId). Populated by the
@@ -118,6 +197,7 @@ export function registerReport(opts: RegisterReportOptions): ReportEntry {
     registeredAt: Date.now(),
   };
   reports.set(id, entry);
+  persistRegistry();
   log.info("Report registered", { id, contentPath: abs, baseDir });
   return entry;
 }
@@ -131,7 +211,9 @@ export function listReports(): ReportEntry[] {
 }
 
 export function deleteReport(id: string): boolean {
-  return reports.delete(id);
+  const removed = reports.delete(id);
+  if (removed) persistRegistry();
+  return removed;
 }
 
 // ─── Theme template loader (cached per theme dir + mtime) ────────────────────
@@ -202,6 +284,21 @@ async function renderReportToHtml(
 // dotfiles: "allow" — repo may live under ~/.cursor/worktrees/… etc.
 const STATIC_OPTS = { maxAge: 0, dotfiles: "allow" as const };
 
+/**
+ * Public/_report assets (edit-panel.js, edit-panel.css, theme-switch.js,
+ * export-menu.js) need an aggressive no-cache policy so dev iteration is
+ * smooth — without this, a hot-reloaded server still serves a 304 and the
+ * browser keeps using the previous JS. We're localhost-only so the cost of
+ * disabling caching here is zero.
+ */
+const PUBLIC_STATIC_OPTS = {
+  maxAge: 0,
+  dotfiles: "allow" as const,
+  setHeaders: (res: import("express").Response) => {
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+  },
+};
+
 export interface MountOptions {
   /** Mount prefix; defaults to `""` (root). */
   prefix?: string;
@@ -231,8 +328,8 @@ export function mountReportRoutes(app: Express, opts: MountOptions = {}): void {
   );
 
   // Static assets — themes, public scripts, paged.js polyfill
-  router.use("/_report/themes", express.static(THEMES_DIR, STATIC_OPTS));
-  router.use("/_report/public", express.static(PUBLIC_DIR, STATIC_OPTS));
+  router.use("/_report/themes", express.static(THEMES_DIR, PUBLIC_STATIC_OPTS));
+  router.use("/_report/public", express.static(PUBLIC_DIR, PUBLIC_STATIC_OPTS));
   router.use(
     "/_report/vendor/paged.polyfill.js",
     express.static(getPagedjsScript(), STATIC_OPTS),
@@ -245,6 +342,26 @@ export function mountReportRoutes(app: Express, opts: MountOptions = {}): void {
   });
   router.get("/_report/themes.json", (_req, res) => {
     res.json(listThemes().map(({ dir: _dir, ...rest }) => rest));
+  });
+
+  // Registered reports as JSON (for the in-sidebar reports modal). Fields
+  // are kept narrow on purpose: the modal needs id / label / contentPath
+  // (so we can show the basename as a subtitle) and registeredAt (so we
+  // can sort newest-first). Anything more would just bloat the payload.
+  router.get("/_report/reports.json", (_req, res) => {
+    const items = listReports()
+      .sort((a, b) => b.registeredAt - a.registeredAt)
+      .map((r) => ({
+        id: r.id,
+        label: r.label,
+        contentPath: r.contentPath,
+        registeredAt: r.registeredAt,
+        // Convenience filename for the modal subtitle line
+        fileName: path.basename(r.contentPath),
+        // Pre-built relative URL the modal can use as the link target
+        url: `${prefix}/reports/${r.id}/`,
+      }));
+    res.json({ ok: true, count: items.length, reports: items });
   });
 
   // Helper — pull `id` out of req.params with the type narrowing TS demands
@@ -386,6 +503,162 @@ export function mountReportRoutes(app: Express, opts: MountOptions = {}): void {
       return;
     }
     void docxHandler(req, res, entry, "download");
+  });
+
+  // ─── Live edit: source view + write-back + change-watch ────────────────────
+  // GET /reports/:id/source.md  → returns the raw markdown file contents
+  // POST /reports/:id/source    → writes JSON {markdown:string} back to disk
+  // GET /reports/:id/source-watch → SSE stream of "change" events when the
+  //                                 source file changes (external edits too)
+  //
+  // The renderer is localhost-only by design (MCP transport), so these write
+  // endpoints are not gated behind auth. If the renderer is ever exposed to
+  // the network, gate these behind an env flag before opening up.
+
+  router.get("/reports/:id/source.md", (req, res) => {
+    const entry = reports.get(getParamId(req));
+    if (!entry) {
+      res.status(404).send("Report not found");
+      return;
+    }
+    try {
+      const stat = fs.statSync(entry.contentPath);
+      const body = fs.readFileSync(entry.contentPath, "utf8");
+      res.set({
+        "Content-Type": "text/markdown; charset=utf-8",
+        // Surface the mtime so the editor can detect external concurrent edits.
+        "X-Source-Mtime": String(stat.mtimeMs),
+        "Cache-Control": "no-store",
+      });
+      res.send(body);
+    } catch (err) {
+      log.error("Source read failed", { id: entry.id, error: String(err) });
+      res.status(500).send(String((err as Error).message || err));
+    }
+  });
+
+  router.post("/reports/:id/source", (req, res) => {
+    const entry = reports.get(getParamId(req));
+    if (!entry) {
+      res.status(404).send("Report not found");
+      return;
+    }
+    const body = (req.body || {}) as Record<string, unknown>;
+    const markdown = body.markdown;
+    if (typeof markdown !== "string") {
+      res.status(400).json({ ok: false, error: "Body must be JSON {markdown: string}" });
+      return;
+    }
+    // Optional optimistic-concurrency check: client sends the mtime they loaded
+    // and we refuse to overwrite if the file changed underneath them.
+    const expectedMtime =
+      typeof body.expected_mtime === "number" ? body.expected_mtime : undefined;
+    try {
+      if (expectedMtime !== undefined) {
+        const currentMtime = fs.statSync(entry.contentPath).mtimeMs;
+        // Allow a 1ms slop window to deal with mtime resolution differences.
+        if (Math.abs(currentMtime - expectedMtime) > 1) {
+          res.status(409).json({
+            ok: false,
+            error: "Source file was modified externally since you loaded it.",
+            current_mtime: currentMtime,
+          });
+          return;
+        }
+      }
+      fs.writeFileSync(entry.contentPath, markdown, "utf8");
+      const newMtime = fs.statSync(entry.contentPath).mtimeMs;
+      log.info("Source written", { id: entry.id, bytes: markdown.length, mtime: newMtime });
+      res.json({ ok: true, mtime: newMtime, bytes: markdown.length });
+    } catch (err) {
+      log.error("Source write failed", { id: entry.id, error: String(err) });
+      res.status(500).json({ ok: false, error: String((err as Error).message || err) });
+    }
+  });
+
+  // POST /reports/:id/render-preview — render arbitrary markdown through the
+  // full pipeline and return just the doc-body HTML. Used by the live-edit
+  // panel for keystroke-debounced live preview WITHOUT writing to disk —
+  // the editor sends its current buffer and gets back the preview HTML to
+  // swap into `.doc-body`. Cheap (~5–20ms server-side for typical reports).
+  router.post("/reports/:id/render-preview", (req, res) => {
+    const entry = reports.get(getParamId(req));
+    if (!entry) {
+      res.status(404).send("Report not found");
+      return;
+    }
+    void (async () => {
+      try {
+        const body = (req.body || {}) as Record<string, unknown>;
+        const markdown = body.markdown;
+        if (typeof markdown !== "string") {
+          res.status(400).json({ ok: false, error: "Body must be JSON {markdown: string}" });
+          return;
+        }
+        const t0 = Date.now();
+        const result = await renderMarkdownString(markdown);
+        const elapsedMs = Date.now() - t0;
+        res.json({ ok: true, html: result.html, elapsed_ms: elapsedMs });
+      } catch (err) {
+        log.error("Preview render failed", { id: entry.id, error: String(err) });
+        res.status(500).json({ ok: false, error: String((err as Error).message || err) });
+      }
+    })();
+  });
+
+  // SSE: notify connected browsers when the source markdown file changes on
+  // disk (external editor save, agent re-render, etc.). The browser's
+  // edit-panel.js reloads the page on receipt so external edits don't get
+  // silently shadowed by a stale view.
+  router.get("/reports/:id/source-watch", (req, res) => {
+    const entry = reports.get(getParamId(req));
+    if (!entry) {
+      res.status(404).send("Report not found");
+      return;
+    }
+    res.set({
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-store, no-transform",
+      "Connection": "keep-alive",
+    });
+    res.flushHeaders?.();
+    res.write(`: connected ${new Date().toISOString()}\n\n`);
+
+    let lastMtime = 0;
+    try {
+      lastMtime = fs.statSync(entry.contentPath).mtimeMs;
+    } catch {
+      // proceed; we'll learn the mtime on the first change event
+    }
+
+    // fs.watch is debounced naturally on macOS/Linux. We re-stat on each event
+    // and only emit when mtime actually moved (avoids spurious "rename" events
+    // editors fire when saving via temp-file swap).
+    let watcher: fs.FSWatcher | undefined;
+    let heartbeat: NodeJS.Timeout | undefined;
+    try {
+      watcher = fs.watch(entry.contentPath, () => {
+        try {
+          const currentMtime = fs.statSync(entry.contentPath).mtimeMs;
+          if (currentMtime > lastMtime) {
+            lastMtime = currentMtime;
+            res.write(`event: change\ndata: ${JSON.stringify({ mtime: currentMtime })}\n\n`);
+          }
+        } catch {
+          // file vanished mid-rename; rely on the next event
+        }
+      });
+    } catch (err) {
+      log.warn("fs.watch failed for source-watch", { id: entry.id, error: String(err) });
+    }
+
+    // Heartbeat every 30s to keep proxies / EventSource happy.
+    heartbeat = setInterval(() => res.write(`: ping\n\n`), 30_000);
+
+    req.on("close", () => {
+      if (watcher) watcher.close();
+      if (heartbeat) clearInterval(heartbeat);
+    });
   });
 
   // /reports/:id/<anything> — serve any file under the report's baseDir. This
