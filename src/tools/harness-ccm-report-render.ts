@@ -20,7 +20,10 @@ import {
   listThemes,
 } from "../report-renderer/index.js";
 
-const THEME_IDS = ["harness", "modern", "glass", "kinetic"] as const;
+// Theme IDs are discovered at runtime from the themes directory (and any
+// registered report packs), so we do NOT hard-code them here. The z.string()
+// schema accepts any value; validation against available themes happens inside
+// resolveTheme() which gracefully falls back to "harness" for unknown IDs.
 
 /** Open a URL in the OS default browser (best-effort, detached). */
 function openInBrowser(url: string): boolean {
@@ -87,11 +90,13 @@ export function registerCcmReportRenderTool(server: McpServer, config: Config): 
           )
           .optional(),
         theme: z
-          .enum(THEME_IDS)
+          .string()
           .describe(
             "Initial theme for the preview URL. User can switch themes in the browser after " +
-              "loading. Options: harness (navy + amber executive), modern (coral editorial), " +
-              "glass (liquid-glass adaptive), kinetic (lime + motion).",
+              "loading. Built-in options: harness (navy + amber executive), modern (coral " +
+              "editorial), glass (liquid-glass adaptive), kinetic (lime + motion). Customer " +
+              "report packs may add additional theme IDs (e.g. 'coles'). Unknown IDs fall " +
+              "back to 'harness'.",
           )
           .optional(),
         id: z
@@ -201,9 +206,8 @@ export function registerCcmReportRenderTool(server: McpServer, config: Config): 
           label: entry.label,
           renderer_base_url: baseUrl,
           hint: opened
-            ? "The report opened in your default browser. Switch themes via the sidebar dropdown " +
-              "(harness / modern / glass / kinetic) and click 'Export PDF' to download."
-            : "Open `url` in a browser. Switch themes via the sidebar dropdown and click 'Export PDF' to download.",
+            ? `The report opened in your default browser. Switch themes via the sidebar dropdown (${themes.join(" / ")}) and click 'Export PDF' to download.`
+            : `Open \`url\` in a browser. Switch themes via the sidebar dropdown (${themes.join(" / ")}) and click 'Export PDF' to download.`,
         });
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);

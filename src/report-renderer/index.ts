@@ -13,7 +13,7 @@ import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import express, { type Express, type Request, type Response } from "express";
 import slugify from "slugify";
-import { renderDocument } from "./render.js";
+import { renderDocument, warmPackPreprocessors } from "./render.js";
 import { renderPdf } from "./pdf.js";
 import { renderVideo } from "./video.js";
 import { renderPptx } from "./pptx.js";
@@ -135,10 +135,12 @@ export function deleteReport(id: string): boolean {
 }
 
 // ─── Theme template loader (cached per theme dir + mtime) ────────────────────
+import type { RenderedDoc } from "./render.js";
+
 type RenderShellFn = (args: {
-  meta: ReturnType<typeof renderDocument>["meta"];
+  meta: RenderedDoc["meta"];
   html: string;
-  toc: ReturnType<typeof renderDocument>["toc"];
+  toc: RenderedDoc["toc"];
   mode: "web" | "print";
   liveReload?: boolean;
   theme: Theme;
@@ -165,7 +167,7 @@ async function renderReportToHtml(
   req: Request,
   res: Response,
 ): Promise<void> {
-  const doc = renderDocument(contentFile);
+  const doc = await renderDocument(contentFile);
   const themeId = (req.query.theme as string | undefined) || "harness";
   const theme = resolveTheme(themeId);
   const renderShell = await loadTemplate(theme.dir);
@@ -179,10 +181,17 @@ async function renderReportToHtml(
     theme,
     themes,
   });
+  // Build the footer-left string from author + classification so customer
+  // themes can override the default "Harness CCM · Confidential" branding.
+  const footerLeft = [doc.meta.author, doc.meta.classification]
+    .filter(Boolean)
+    .join(" · ");
+
   const withDataAttrs = html.replace(
     "<body",
     `<body data-doc-customer="${encodeDataAttr(doc.meta.customer)}" ` +
       `data-doc-title="${encodeDataAttr(doc.meta.title)}" ` +
+      `data-doc-footer-left="${encodeDataAttr(footerLeft)}" ` +
       `data-theme="${theme.id}"`,
   );
   res.set("Content-Type", "text/html; charset=utf-8");
@@ -213,6 +222,13 @@ export interface MountOptions {
 export function mountReportRoutes(app: Express, opts: MountOptions = {}): void {
   const prefix = opts.prefix?.replace(/\/+$/, "") ?? "";
   const router = express.Router({ strict: true });
+
+  // Warm up pack preprocessors asynchronously at mount time so the first
+  // rendered report doesn't stall on dynamic imports. Errors are logged but
+  // not fatal — packs with bad preprocessors are skipped gracefully.
+  void warmPackPreprocessors().catch((err) =>
+    log.warn("Pack preprocessor warm-up failed", { error: String(err) }),
+  );
 
   // Static assets — themes, public scripts, paged.js polyfill
   router.use("/_report/themes", express.static(THEMES_DIR, STATIC_OPTS));
@@ -441,7 +457,7 @@ export function mountReportRoutes(app: Express, opts: MountOptions = {}): void {
       const tts = resolveTtsProvider({
         ...(providerName ? { providerName } : {}),
       });
-      const doc = renderDocument(entry.contentPath);
+      const doc = await renderDocument(entry.contentPath);
       const result = await renderVideo({
         baseUrl,
         meta: doc.meta,
@@ -492,7 +508,7 @@ export function mountReportRoutes(app: Express, opts: MountOptions = {}): void {
           ? (body.slide_size as "16x9" | "4x3")
           : "16x9";
 
-      const doc = renderDocument(entry.contentPath);
+      const doc = await renderDocument(entry.contentPath);
       const raw = await fs.promises.readFile(entry.contentPath, "utf-8");
       // Strip YAML frontmatter — already parsed into doc.meta.
       const markdown = raw.replace(/^---\n[\s\S]*?\n---\n/, "");
@@ -548,7 +564,7 @@ export function mountReportRoutes(app: Express, opts: MountOptions = {}): void {
   ): Promise<void> {
     try {
       const themeId = (req.query.theme as string | undefined) || "harness";
-      const doc = renderDocument(entry.contentPath);
+      const doc = await renderDocument(entry.contentPath);
       // Strip YAML frontmatter — `renderDocument` already parsed it into
       // `doc.meta`; leaving the raw frontmatter in the body would produce a
       // leading code-block in the Word doc.
@@ -582,7 +598,7 @@ export function mountReportRoutes(app: Express, opts: MountOptions = {}): void {
     docPath: string,
   ): Promise<void> {
     try {
-      const doc = renderDocument(contentFile);
+      const doc = await renderDocument(contentFile);
       const themeId = (req.query.theme as string | undefined) || "harness";
       const theme = resolveTheme(themeId);
       const baseUrl = baseUrlGetter();

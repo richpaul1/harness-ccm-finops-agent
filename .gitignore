@@ -13,3 +13,4 @@ scratch
 package-lock.json
 yarn.lock
 .env copy
+report-packs/

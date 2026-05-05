@@ -60,7 +60,7 @@ function buildHint(result: VideoRenderResult, hasProvider: boolean): string {
   return "Open `out_path` locally, or hit `download_url` from a browser to grab the MP4.";
 }
 
-const THEME_IDS = ["harness", "modern", "glass", "kinetic"] as const;
+// Theme IDs are discovered at runtime — no hard-coded enum here.
 const VOICES = ["alloy", "echo", "fable", "onyx", "nova", "shimmer"] as const;
 const TTS_PROVIDERS = ["openai", "elevenlabs", "azure", "google", "local"] as const;
 
@@ -108,10 +108,11 @@ export function registerCcmVideoRenderTool(server: McpServer, config: Config): v
           .describe("Optional human-readable label.")
           .optional(),
         theme: z
-          .enum(THEME_IDS)
+          .string()
           .describe(
             "Theme to render the slides in. Default `harness`. The video frames the print-view " +
-              "of the chosen theme exactly as the PDF export does.",
+              "of the chosen theme exactly as the PDF export does. Built-in: harness, modern, " +
+              "glass, kinetic. Customer packs may add more (e.g. 'coles').",
           )
           .optional(),
         voice: z
@@ -271,7 +272,7 @@ export function registerCcmVideoRenderTool(server: McpServer, config: Config): v
           ...(args.tts_cache === false ? { cache: false } : {}),
         });
 
-        const doc = renderDocument(mdPath);
+        const doc = await renderDocument(mdPath);
         const result = await renderVideo({
           baseUrl,
           meta: doc.meta,

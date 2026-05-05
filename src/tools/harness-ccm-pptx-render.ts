@@ -23,7 +23,7 @@ import {
 import { renderDocument } from "../report-renderer/render.js";
 import { renderPptx } from "../report-renderer/pptx.js";
 
-const THEME_IDS = ["harness", "modern", "glass", "kinetic"] as const;
+// Theme IDs are discovered at runtime — no hard-coded enum here.
 const SLIDE_SIZES = ["16x9", "4x3", "A4"] as const;
 
 export function registerCcmPptxRenderTool(server: McpServer, config: Config): void {
@@ -68,10 +68,11 @@ export function registerCcmPptxRenderTool(server: McpServer, config: Config): vo
           .describe("Optional human-readable label.")
           .optional(),
         theme: z
-          .enum(THEME_IDS)
+          .string()
           .describe(
             "Theme to render the slides in. Default `harness`. The deck frames the print-view " +
-              "of the chosen theme exactly as the PDF export does.",
+              "of the chosen theme exactly as the PDF export does. Built-in: harness, modern, " +
+              "glass, kinetic. Customer packs may add more (e.g. 'coles').",
           )
           .optional(),
         slide_size: z
@@ -143,7 +144,7 @@ export function registerCcmPptxRenderTool(server: McpServer, config: Config): vo
           );
         }
 
-        const doc = renderDocument(mdPath);
+        const doc = await renderDocument(mdPath);
         const result = await renderPptx({
           baseUrl,
           meta: doc.meta,

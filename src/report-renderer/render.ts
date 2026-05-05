@@ -18,6 +18,7 @@ import { calloutsPlugin } from "./plugins/callouts.js";
 import { preprocessCalloutSyntax } from "./plugins/callout-normalize.js";
 import { preprocessMetricCards } from "./plugins/metric-cards.js";
 import { preprocessVoiceComments } from "./plugins/voice-narration.js";
+import { loadPackPreprocessors } from "./packs/index.js";
 
 export interface DocMeta {
   title: string;
@@ -110,11 +111,36 @@ export function buildToc(content: string): TocEntry[] {
   return toc;
 }
 
-export function renderDocument(filePath: string): RenderedDoc {
+/**
+ * Pre-warm the pack preprocessor cache at server startup. This triggers the
+ * first dynamic imports so the first `renderDocument()` call is not slow.
+ * After warm-up, `loadPackPreprocessors()` uses mtime-based cache entries and
+ * re-imports only changed files — so edits to pack block `.js` files take
+ * effect on the next render without a server restart.
+ */
+export async function warmPackPreprocessors(): Promise<void> {
+  await loadPackPreprocessors();
+}
+
+export async function renderDocument(filePath: string): Promise<RenderedDoc> {
   const raw = fs.readFileSync(filePath, "utf8");
   const { data: frontmatter, content } = matter(raw);
+
+  // Apply pack preprocessors (loaded synchronously from the mtime-keyed cache;
+  // the async warm already ran at startup so this is a cheap cache lookup).
+  // We call loadPackPreprocessors() synchronously via a top-level-await shim:
+  // since the MCP server is always async, we use the already-loaded cache here
+  // and rely on warmPackPreprocessors() having been called at mount time.
+  // Pack preprocessors whose .js files have changed since startup are picked up
+  // on the next render via the mtime cache-buster in packs/index.ts.
+  let packProcessed = content;
+  const packPreprocessors = await loadPackPreprocessors();
+  for (const fn of packPreprocessors) {
+    packProcessed = fn(packProcessed);
+  }
+
   const processed = preprocessVoiceComments(
-    preprocessMetricCards(preprocessCalloutSyntax(content)),
+    preprocessMetricCards(preprocessCalloutSyntax(packProcessed)),
   );
 
   const html = md.render(processed);

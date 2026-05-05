@@ -1,0 +1,11 @@
+{
+  "id": "coles",
+  "name": "Coles Group",
+  "description": "Coles Group branded theme: Coles red, charcoal and white. Designed for the monthly Portfolio Cost Optimisation report.",
+  "brand": {
+    "wordmark": "Coles Group",
+    "sub": "Cloud Cost Optimisation"
+  },
+  "fonts": "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap",
+  "pageSize": "A4"
+}

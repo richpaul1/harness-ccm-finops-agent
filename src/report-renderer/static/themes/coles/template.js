@@ -16,9 +16,10 @@ function printTocHtml(toc) {
   const items = toc
     .filter((h) => h.level <= 2)
     .map((h) => {
-      const num = h.level === 1
-        ? `<span class="toc-num">${String(++h1Index).padStart(2, "0")}</span>`
-        : "";
+      const num =
+        h.level === 1
+          ? `<span class="toc-num">${String(++h1Index).padStart(2, "0")}</span>`
+          : "";
       return `<li class="toc-l${h.level}"><a href="#${h.id}">${num}<span class="toc-text">${h.text}</span><span class="toc-leader"></span></a></li>`;
     })
     .join("\n");
@@ -52,7 +53,7 @@ export function renderShell({
   const title = `${meta.title} · ${meta.customer || meta.author}`;
   const themeBase = `/_report/themes/${theme.id}`;
 
-  // Render either a customer logo img or the brand wordmark text.
+  // Customer logo or brand wordmark
   const logoHtml = meta.customerLogo
     ? `<img class="cover-customer-logo" src="${meta.customerLogo}" alt="${meta.customer || "Customer"} logo" />`
     : `<div class="cover-wordmark">
@@ -68,8 +69,7 @@ export function renderShell({
       </header>
 
       <div class="cover-art" aria-hidden="true">
-        <div class="cover-art-grid"></div>
-        <div class="cover-art-accent"></div>
+        <div class="cover-art-stripe"></div>
       </div>
 
       <div class="cover-main">
@@ -84,20 +84,21 @@ export function renderShell({
           <div class="cover-customer-name">${meta.customer || ""}</div>
         </div>
         <div class="cover-meta">
-          <div><span class="cover-meta-label">Date</span>${meta.date || ""}</div>
+          <div><span class="cover-meta-label">Period</span>${meta.period || meta.date || ""}</div>
           <div><span class="cover-meta-label">Prepared by</span>${meta.author || ""}</div>
         </div>
       </footer>
     </section>
   `;
 
-  const tocBlock = `
-    <section class="page-break-before toc-page" id="table-of-contents">
-      <div class="section-marker"><span>Contents</span></div>
-      <h1 class="page-title">Table of Contents</h1>
-      ${printTocHtml(toc)}
-    </section>
-  `;
+  const tocBlock =
+    toc.length > 0
+      ? `<section class="page-break-before toc-page" id="table-of-contents">
+          <div class="section-marker"><span>Contents</span></div>
+          <h1 class="page-title">Table of Contents</h1>
+          ${printTocHtml(toc)}
+        </section>`
+      : "";
 
   const reloadScript = liveReload
     ? `<script>
@@ -113,7 +114,7 @@ export function renderShell({
            <div class="sidebar-head">
              <div class="sidebar-brand">
                <span class="brand-mark">${theme.brand.wordmark}</span>
-               <span class="brand-sub">CCM Reports</span>
+               <span class="brand-sub">Reports</span>
              </div>
            </div>
            <div class="export-menu" id="export-menu">
@@ -125,15 +126,11 @@ export function renderShell({
                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="12" rx="1"/><path d="M12 15v4"/><path d="M8 21h8"/><path d="m7 10 3-3 3 3 4-5"/></svg>
                <span class="btn-label">Export PowerPoint</span>
              </button>
-             <button class="btn btn-icon btn-secondary" data-export="docx" title="Export Word" aria-label="Export Word">
-               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8"/><path d="M8 17h6"/></svg>
-               <span class="btn-label">Export Word</span>
-             </button>
            </div>
            <div class="sidebar-meta">
              <div class="sidebar-doctype">${meta.docType || ""}</div>
              <div class="sidebar-title">${meta.title}</div>
-             <div class="sidebar-customer">${meta.customer || ""} · ${meta.date || ""}</div>
+             <div class="sidebar-customer">${meta.customer || ""} · ${meta.period || meta.date || ""}</div>
            </div>
            ${themeSwitcher(themes, theme.id)}
            <div class="sidebar-toc">${tocHtml(toc)}</div>
@@ -146,11 +143,11 @@ export function renderShell({
   const pagedjsBoot = isPrint
     ? `<script src="/_report/vendor/paged.polyfill.js"></script>
        <script>
-         class HarnessHandler extends Paged.Handler {
+         class ColesHandler extends Paged.Handler {
            constructor(chunker, polisher, caller) { super(chunker, polisher, caller); }
            afterRendered() { window.__PAGED_READY__ = true; }
          }
-         Paged.registerHandlers(HarnessHandler);
+         Paged.registerHandlers(ColesHandler);
        </script>`
     : `<script type="module" src="${themeBase}/app.js"></script>
        <script type="module" src="/_report/public/theme-switch.js"></script>

@@ -1970,3 +1970,135 @@ harness_ccm_finops_list
 ```
 
 ---
+
+## 20. Customer Report Packs
+
+A **Report Pack** bundles everything one customer needs to produce a branded,
+recurring report family without touching the core renderer. Each pack lives under
+`report-packs/<pack-id>/` in the repo (or in an external directory pointed to by
+`HARNESS_REPORT_PACKS_DIR_EXTRA`).
+
+### Pack anatomy
+
+```
+report-packs/
+  <customer-id>/
+    pack.json         # manifest: id, name, theme_id, block_preprocessors, templates
+    theme/            # Coles-branded theme (manifest.json + template.js + *.css + app.js)
+    blocks/           # Custom ::: block preprocessors (plain .js, ESM)
+    templates/        # Markdown skeletons with {{placeholder}} fields
+    playbook.md       # Agent-readable instructions: which CCM queries to run, what to fill
+    README.md         # CSM onboarding reference
+```
+
+### Discovery and loading
+
+The pack registry (`src/report-renderer/packs/index.ts`) scans all pack roots at server
+startup. Blocks are loaded lazily on first render and cached. Theme directories contributed
+by packs are added to the theme-roots list so `?theme=<pack-theme-id>` Just Works.
+
+**Pack roots, in priority order (first match wins on `id` collision):**
+
+1. `HARNESS_REPORT_PACKS_DIR_EXTRA` — colon-separated list of external absolute paths.
+   Use this for customers whose packs are maintained outside the core repo (CI overlays,
+   customer-operated CSM environments).
+2. `report-packs/` in this repo — the default in-repo location.
+
+**Extra themes dir** (`HARNESS_REPORT_THEMES_DIR_EXTRA`) similarly lets you drop customer
+themes in without touching the bundled `src/report-renderer/static/themes/` directory.
+
+### The `pack.json` manifest
+
+```json
+{
+  "id": "coles",
+  "name": "Coles Group",
+  "theme_id": "coles",
+  "block_preprocessors": [
+    "blocks/portfolio-bucket-grid.js",
+    "blocks/portfolio-detail.js"
+  ],
+  "templates": [
+    {
+      "id": "portfolio-monthly",
+      "name": "Monthly Portfolio Cost Optimisation Report",
+      "path": "templates/portfolio-monthly.md"
+    }
+  ]
+}
+```
+
+- `theme_id` — the `id` field in the pack's `theme/manifest.json`. The pack's theme
+  directory is exposed to the renderer automatically.
+- `block_preprocessors` — relative paths to **compiled JS (ESM)** files. Each must export
+  `preprocessMarkdown(src: string): string`. Applied in order before markdown-it parses
+  the document — same pipeline position as `metric-cards` and `callout-normalize`.
+- `templates` — informational list for the agent; not auto-loaded by the renderer.
+
+### Writing a custom block preprocessor
+
+Two authoring patterns, matching the built-in plugins:
+
+**Pattern 1 — Preprocessor (like metric-cards):** for data-driven visual blocks.
+
+```js
+// blocks/my-block.js
+const BLOCK_RE = /^[ \t]*:::\s*my_block\s*\r?\n([\s\S]*?)^[ \t]*:::\s*$/gm;
+
+export function preprocessMarkdown(src) {
+  return src.replace(BLOCK_RE, (_match, body) => {
+    // Parse body, render HTML
+    return `\n<div class="my-block">...</div>\n`;
+  });
+}
+```
+
+**Pattern 2 — Container (like callouts, via markdown-it-container):** for narrative/titled blocks.
+If you need container-style rendering, write a preprocessor that emits the HTML directly
+(Pattern 1) rather than registering a markdown-it plugin — this avoids requiring access to
+the markdown-it instance and keeps the contract to the simple `preprocessMarkdown` export.
+
+### Coles example — what's included
+
+The `report-packs/coles/` pack ships the Coles Group monthly Portfolio Cost Optimisation
+report with two new block types:
+
+| Block | Purpose |
+|---|---|
+| `::: portfolio_bucket_grid` | Page-1 hero: 5-column SVG bucket grid showing captured vs potential FY savings per portfolio |
+| `::: portfolio_detail <name> \| GM: <name> \| ...` | Per-portfolio detail page: header bar, financial summary, insights narrative, cost-centre breakdown table |
+
+**To generate a Coles report, tell the agent:**
+
+> "Read `report-packs/coles/playbook.md` and generate this month's portfolio report
+> for Coles. Today's period is FY26 YTD to 31 January."
+
+The agent will:
+1. Read the playbook.
+2. Run the CCM queries listed in Steps 0–5.
+3. Fill the structured fields in a copy of `templates/portfolio-monthly.md`.
+4. Prompt you for the narrative/human fields (GM names, insight bullets, Apptio figures).
+5. Call `harness_ccm_finops_report_render` with `theme: "coles"`.
+
+### Export formats for pack-specific reports
+
+| Format | Works | How |
+|---|---|---|
+| Browser (HTML) | ✅ Full fidelity | `harness_ccm_finops_report_render` |
+| PDF | ✅ Full fidelity | Export PDF button in browser |
+| Paged.js PPTX | ✅ Full fidelity (image slides) | `harness_ccm_finops_pptx_render` with `slide_size: "A4"` |
+| Editable PPTX (sidebar) | ⚠️ Low fidelity | Custom blocks render as HTML text; acceptable for simple reports |
+| DOCX | ⚠️ Low fidelity | Same limitation |
+
+### Adding a new customer pack
+
+1. Create `report-packs/<new-customer>/pack.json` with your `id`, `theme_id`, and `block_preprocessors`.
+2. Create `report-packs/<new-customer>/theme/manifest.json` (and the 5 other theme files).
+3. Write block preprocessors as plain `.js` ESM modules in `blocks/`.
+4. Create a `templates/` skeleton and a `playbook.md`.
+5. Restart the MCP server — the pack is auto-discovered on next startup.
+6. Render: `harness_ccm_finops_report_render` with `theme: "<new-customer>"`.
+
+No code changes to the core renderer are needed.
+
+---

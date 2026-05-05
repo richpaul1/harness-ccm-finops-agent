@@ -1,0 +1,197 @@
+/* =============================================================
+   COLES WEB / BROWSER VIEW
+   Sidebar layout + interactive chrome.
+   ============================================================= */
+
+/* ── Layout shell ───────────────────────────────────────────── */
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+  background: #F0F0F0;
+}
+
+.app-sidebar {
+  width: 240px;
+  min-width: 240px;
+  background: #1A1A1A;
+  color: rgba(255,255,255,0.85);
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow: hidden;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.sidebar-head {
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.sidebar-brand {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.sidebar-brand .brand-mark {
+  font-weight: 800;
+  font-size: 15px;
+  color: #E01A22;
+  letter-spacing: 0.02em;
+}
+.sidebar-brand .brand-sub {
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.4);
+}
+
+/* ── Export menu ────────────────────────────────────────────── */
+.export-menu {
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  transition: background 0.15s, opacity 0.15s;
+  text-align: left;
+  width: 100%;
+}
+.btn-primary {
+  background: #E01A22;
+  color: #fff;
+}
+.btn-primary:hover { background: #B01218; }
+.btn-secondary {
+  background: rgba(255,255,255,0.07);
+  color: rgba(255,255,255,0.8);
+}
+.btn-secondary:hover { background: rgba(255,255,255,0.12); }
+.btn-label { flex: 1; }
+.btn svg { flex-shrink: 0; }
+
+/* ── Sidebar meta + TOC ─────────────────────────────────────── */
+.sidebar-meta {
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.sidebar-doctype {
+  font-size: 9.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.35);
+  margin-bottom: 4px;
+}
+.sidebar-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.3;
+  margin-bottom: 4px;
+}
+.sidebar-customer {
+  font-size: 11px;
+  color: rgba(255,255,255,0.4);
+}
+
+.sidebar-toc {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 0;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.1) transparent;
+}
+
+.toc-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.toc-list li a {
+  display: block;
+  padding: 6px 20px;
+  color: rgba(255,255,255,0.55);
+  text-decoration: none;
+  font-size: 12.5px;
+  border-left: 2px solid transparent;
+  transition: color 0.12s, border-color 0.12s, background 0.12s;
+  line-height: 1.4;
+}
+.toc-list li a:hover {
+  color: #fff;
+  background: rgba(255,255,255,0.05);
+}
+.toc-list li a.active {
+  color: #E01A22;
+  border-left-color: #E01A22;
+  background: rgba(224,26,34,0.08);
+}
+.toc-l1 > a { font-weight: 600; }
+.toc-l2 > a { padding-left: 36px; font-size: 12px; }
+.toc-l3 > a { padding-left: 52px; font-size: 11.5px; }
+
+/* ── Theme switcher ─────────────────────────────────────────── */
+.theme-switch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  font-size: 12px;
+  color: rgba(255,255,255,0.5);
+}
+.theme-switch-label { font-weight: 500; }
+#theme-select {
+  flex: 1;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: rgba(255,255,255,0.8);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+/* ── Main content area ──────────────────────────────────────── */
+.app-main { flex: 1; overflow-x: hidden; }
+
+.doc-container {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 48px 64px 120px;
+}
+
+.cover-page {
+  margin: 0 -64px 64px;
+  border-radius: 6px;
+}
+
+/* ── Responsive ─────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .app-sidebar { width: 200px; min-width: 200px; }
+  .doc-container { padding: 32px 32px 80px; }
+  .cover-page { margin: 0 -32px 48px; }
+}
+@media (max-width: 640px) {
+  .app-shell { flex-direction: column; }
+  .app-sidebar { width: 100%; height: auto; position: static; }
+  .sidebar-toc { display: none; }
+  .doc-container { padding: 24px 20px 60px; }
+  .cover-page { margin: 0 -20px 36px; }
+}

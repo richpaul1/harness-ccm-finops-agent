@@ -1,10 +1,10 @@
 /* =============================================================
-   PRINT / PDF VIEW — Paged Media via paged.polyfill.js
+   COLES PRINT / PDF VIEW — Paged Media via paged.polyfill.js
    ============================================================= */
 
 @page {
   size: A4;
-  margin: 22mm 18mm 22mm 18mm;
+  margin: 20mm 16mm 20mm 16mm;
 }
 
 @page :first {
@@ -16,56 +16,66 @@
 }
 
 @page toc {
-  margin: 22mm 18mm 22mm 18mm;
+  margin: 20mm 16mm 20mm 16mm;
   @bottom-center {
     content: counter(page);
     font-family: "Inter", sans-serif;
     font-size: 9.5px;
-    color: #64708a;
+    color: #5A5A5A;
   }
 }
 
-/* Main body pages: running header + footer */
-@page main {
-  margin: 22mm 18mm 22mm 18mm;
-  @top-left {
-    content: string(doc-customer);
-    font-family: "Inter", sans-serif;
-    font-size: 9px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: #64708a;
-    font-weight: 600;
-  }
-  @top-center {
-    content: string(doc-title);
-    font-family: "Inter", sans-serif;
-    font-size: 9px;
-    color: #8a95ac;
-  }
-  @top-right {
-    content: string(doc-section);
-    font-family: "Inter", sans-serif;
-    font-size: 9px;
-    color: #8a95ac;
-  }
+@page portfolio-summary {
+  size: A4 landscape;
+  margin: 12mm 12mm 16mm 12mm;
   @bottom-left {
     content: string(doc-footer-left);
     font-family: "Inter", sans-serif;
     font-size: 9px;
-    color: #8a95ac;
+    color: #8A8A8A;
   }
   @bottom-right {
     content: counter(page) " / " counter(pages);
     font-family: "JetBrains Mono", monospace;
     font-size: 9.5px;
-    color: #334766;
+    color: #1A1A1A;
+    font-weight: 500;
+  }
+}
+
+@page main {
+  margin: 20mm 16mm 20mm 16mm;
+  @top-left {
+    content: string(doc-customer);
+    font-family: "Inter", sans-serif;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #5A5A5A;
+    font-weight: 600;
+  }
+  @top-right {
+    content: string(doc-section);
+    font-family: "Inter", sans-serif;
+    font-size: 9px;
+    color: #8A8A8A;
+  }
+  @bottom-left {
+    content: string(doc-footer-left);
+    font-family: "Inter", sans-serif;
+    font-size: 9px;
+    color: #8A8A8A;
+  }
+  @bottom-right {
+    content: counter(page) " / " counter(pages);
+    font-family: "JetBrains Mono", monospace;
+    font-size: 9.5px;
+    color: #1A1A1A;
     font-weight: 500;
   }
 }
 
 .print-doc { font-size: 10.5pt; line-height: 1.55; }
-
 .print-doc .doc-body h1 { string-set: doc-section content(); }
 
 /* Hide web-only chrome */
@@ -95,38 +105,39 @@
   content: target-counter(attr(href), page);
   font-family: "JetBrains Mono", monospace;
   font-size: 10.5pt;
-  color: #334766;
+  color: #1A1A1A;
   font-weight: 500;
   font-variant-numeric: tabular-nums;
   margin-left: 8px;
 }
-.print-doc .print-toc .toc-l2 a::after { color: #64708a; font-size: 10pt; }
+
+/* Portfolio bucket summary page — landscape */
+.print-doc .portfolio-bucket-page {
+  page: portfolio-summary;
+  page-break-before: always;
+  page-break-after: always;
+  margin: 0;
+}
 
 /* Main document pages */
 .print-doc .doc-body {
   page: main;
   page-break-before: always;
 }
-.print-doc .doc-body::before {
-  /* bind the strings used in running headers */
-  content: "";
-  display: none;
-}
 
-/* Set running strings from frontmatter via body data attributes */
-body[data-doc-customer]::after {
-  content: attr(data-doc-customer);
-  string-set: doc-customer attr(data-doc-customer);
-}
-
-/* Footer-left: use data-doc-footer-left when present; fall back to brand string */
+/* Set running strings from body data attributes */
 body::before {
   content: "";
-  string-set: doc-footer-left "Harness CCM · Confidential";
+  string-set: doc-footer-left "Coles Group · Confidential";
   display: none;
 }
 body[data-doc-footer-left]::before {
   string-set: doc-footer-left attr(data-doc-footer-left);
+}
+body[data-doc-customer]::after {
+  content: attr(data-doc-customer);
+  string-set: doc-customer attr(data-doc-customer);
+  display: none;
 }
 
 /* Page breaks */
@@ -139,21 +150,21 @@ body[data-doc-footer-left]::before {
 .print-doc .doc-body table,
 .print-doc .metric-grid { page-break-inside: avoid; }
 
-/* Tables in print — stronger contrast on rows */
-.print-doc .doc-body table { font-size: 9.5pt; }
-.print-doc .doc-body thead th { font-size: 8.5pt; }
-.print-doc .doc-body tbody td { padding: 10px 12px; }
+/* Portfolio detail: each gets its own page */
+.print-doc .portfolio-detail { page-break-before: always; page-break-inside: avoid; }
+.print-doc .portfolio-bucket-grid { page-break-inside: avoid; }
 
-/* Code */
-.print-doc .doc-body pre { font-size: 9pt; padding: 14px 16px; }
+/* Tables in print */
+.print-doc .doc-body table { font-size: 9pt; }
+.print-doc .doc-body thead th { font-size: 8pt; }
+.print-doc .doc-body tbody td { padding: 7px 10px; }
 
-/* Size adjustments for print */
-.print-doc .page-title { font-size: 32pt; }
-.print-doc .cover-title { font-size: 42pt; }
-.print-doc .cover-customer-name { font-size: 22pt; }
-.print-doc .doc-body h1 { font-size: 24pt; }
-.print-doc .doc-body h2 { font-size: 16pt; }
-.print-doc .doc-body h3 { font-size: 12.5pt; }
+/* Size adjustments */
+.print-doc .cover-title { font-size: 40pt; }
+.print-doc .cover-customer-name { font-size: 20pt; }
+.print-doc .doc-body h1 { font-size: 22pt; }
+.print-doc .doc-body h2 { font-size: 15pt; }
+.print-doc .doc-body h3 { font-size: 12pt; }
 .print-doc .doc-body p { max-width: none; }
 
 .print-doc .doc-body figure.figure img {
@@ -162,10 +173,8 @@ body[data-doc-footer-left]::before {
   object-fit: contain;
 }
 
-/* Paged.js injects its own wrapper; make sure our cover fills page */
+/* Paged.js wrappers */
 .pagedjs_page .pagedjs_page_content { overflow: visible; }
-
-/* Force one PDF page per Paged.js page */
 .pagedjs_page {
   page-break-after: always !important;
   break-after: page !important;
